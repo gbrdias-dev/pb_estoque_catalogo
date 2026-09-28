@@ -1,1 +1,1 @@
-#Sistema de catálogo e gerenciamento de Estoque
+Sistema de catálogo e gerenciamento de Estoque
