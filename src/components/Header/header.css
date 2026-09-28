@@ -1,0 +1,126 @@
+/* ==============================
+   HEADER - P&B
+   ============================== */
+
+.header {
+  width: 100%;
+  background-color: #ffffff;
+  border-bottom: 1px solid #d9b24c;
+  position: relative;
+  z-index: 1000;
+}
+
+.header-container {
+  max-width: 1200px;
+  min-height: 72px;
+  margin: 0 auto;
+  padding: 0 32px;
+
+  /* Flexbox para organizar os elementos */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+/* Logo */
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.header-logo img {
+  width: 90px;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+/* Menu */
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 36px;
+  flex: 1;
+}
+
+.header-nav a {
+  position: relative;
+  color: #171717;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  text-decoration: none;
+  padding: 8px 0;
+  transition: color 0.2s ease;
+}
+
+.header-nav a:hover,
+.header-nav a.active {
+  color: #a67813;
+}
+
+/* Linha dourada abaixo do item ativo */
+
+.header-nav a.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background-color: #d9a91a;
+}
+
+/* Instagram */
+
+.header-instagram {
+  color: #a67813;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.header-instagram:hover {
+  color: #d9a91a;
+}
+
+/* ==============================
+   RESPONSIVIDADE
+   ============================== */
+
+@media (max-width: 768px) {
+  .header-container {
+    min-height: auto;
+    padding: 16px 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .header-logo {
+    width: 100%;
+    text-align: center;
+  }
+
+  .header-nav {
+    order: 3;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 18px 24px;
+  }
+
+  .header-nav a {
+    font-size: 14px;
+  }
+
+  .header-instagram {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 13px;
+  }
+}

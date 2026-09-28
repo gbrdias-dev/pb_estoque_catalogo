@@ -1,0 +1,145 @@
+/* ================================
+   FOOTER
+   ================================ */
+
+.footer {
+  width: 100%;
+  background: #2f2a25;
+  color: #ffffff;
+}
+
+/* ================================
+   CONTAINER PRINCIPAL
+   ================================ */
+
+.footer-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 70px 40px;
+
+  display: grid;
+  grid-template-columns: 2fr repeat(3, 1fr);
+  gap: 50px;
+}
+
+/* ================================
+   MARCA
+   ================================ */
+
+.footer-brand {
+  max-width: 300px;
+}
+
+.footer-logo {
+  display: inline-block;
+  margin-bottom: 18px;
+
+  color: #d8b968;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 42px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.footer-brand p {
+  margin: 0;
+
+  color: #d8d1c7;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+/* ================================
+   COLUNAS
+   ================================ */
+
+.footer-column h3 {
+  margin: 0 0 20px;
+
+  color: #d8b968;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.footer-links,
+.footer-contact,
+.footer-social {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer a:not(.footer-logo) {
+  color: #d8d1c7;
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer a:not(.footer-logo):hover {
+  color: #d8b968;
+}
+
+.footer-contact a {
+  word-break: break-word;
+}
+
+/* ================================
+   PARTE INFERIOR
+   ================================ */
+
+.footer-bottom {
+  width: 100%;
+  border-top: 1px solid rgba(216, 185, 104, 0.25);
+
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+
+  padding: 22px 40px;
+}
+
+.footer-bottom p {
+  margin: 0;
+
+  color: #a9a29a;
+  font-size: 12px;
+}
+
+/* ================================
+   RESPONSIVIDADE
+   ================================ */
+
+@media (max-width: 800px) {
+  .footer-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 40px;
+  }
+
+  .footer-brand {
+    grid-column: 1 / -1;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+@media (max-width: 550px) {
+  .footer-container {
+    grid-template-columns: 1fr;
+    padding: 55px 24px;
+    gap: 35px;
+  }
+
+  .footer-brand {
+    max-width: 100%;
+  }
+
+  .footer-bottom {
+    padding: 20px 24px;
+  }
+}
