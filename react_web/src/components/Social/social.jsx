@@ -1,12 +1,6 @@
 import "./social.css";
 
 function Social() {
-  const posts = [
-    { id: 1, label: "Foto do Instagram" },
-    { id: 2, label: "Foto do Instagram" },
-    { id: 3, label: "Foto do Instagram" },
-    { id: 4, label: "Foto do Instagram" },
-  ];
 
   return (
     <section className="social" id="social">
