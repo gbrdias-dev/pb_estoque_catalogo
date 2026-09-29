@@ -83,30 +83,6 @@
   line-height: 1.8;
 }
 
-.about-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  margin-top: 12px;
-  padding: 14px 26px;
-
-  background: #b08d3c;
-  border: 1px solid #b08d3c;
-  border-radius: 2px;
-  color: #ffffff;
-
-  font-size: 15px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: 0.3s ease;
-}
-
-.about-button:hover {
-  background: transparent;
-  color: #b08d3c;
-}
-
 @media (max-width: 768px) {
   .about-container {
     padding: 70px 24px;

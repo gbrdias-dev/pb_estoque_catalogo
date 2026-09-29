@@ -34,12 +34,14 @@
 .footer-logo {
   display: inline-block;
   margin-bottom: 18px;
-
-  color: #d8b968;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 42px;
-  font-weight: 600;
   text-decoration: none;
+}
+
+/* Controla o tamanho da imagem do logo para que ela se encaixe perfeitamente */
+.footer-logo img {
+  max-width: 140px; /* Ajuste este valor se quiser o logo um pouco maior ou menor */
+  height: auto;
+  display: block;
 }
 
 .footer-brand p {

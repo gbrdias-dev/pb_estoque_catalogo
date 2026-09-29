@@ -19,7 +19,7 @@ function Benefits() {
     },
     {
       number: "04",
-      title: "Atendimento especial",
+      title: "Atendimento personalizado",
       description: "Estamos aqui para ajudar você a encontrar a peça ideal.",
     },
   ];

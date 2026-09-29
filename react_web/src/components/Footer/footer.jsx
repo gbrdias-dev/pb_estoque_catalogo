@@ -1,4 +1,5 @@
 import "./footer.css";
+import logo from "../../assets/imagens/logo_p&b.png";
 
 function Footer() {
   return (
@@ -8,7 +9,10 @@ function Footer() {
         {/* Identidade da marca */}
         <div className="footer-brand">
           <a href="#inicio" className="footer-logo">
-            P&B
+            <img
+              src={logo}
+              alt="Logo P&B Bijuterias"
+            />
           </a>
 
           <p>

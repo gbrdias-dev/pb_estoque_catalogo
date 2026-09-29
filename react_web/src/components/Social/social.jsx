@@ -34,23 +34,7 @@ function Social() {
           </a>
         </div>
 
-        <div className="social-grid">
-          {posts.map((post) => (
-            <a
-              href="https://www.instagram.com/"
-              className="social-post"
-              key={post.id}
-              target="_blank"
-              rel="noreferrer"
-              aria-label={`Publicação ${post.id} no Instagram`}
-            >
-              <div className="social-post-placeholder">
-                <span>Instagram</span>
-                <small>{post.label}</small>
-              </div>
-            </a>
-          ))}
-        </div>
+
       </div>
     </section>
   );

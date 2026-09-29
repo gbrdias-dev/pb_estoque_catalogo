@@ -54,13 +54,14 @@
 }
 
 /* ================================
-   GRID DOS TESTEMUNHOS
+   GRID DOS TESTEMUNHOS / SWIPER
    ================================ */
 
-.testimonials-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+/* Ajuste de posição para o container do Swiper acomodar as setas nas laterais */
+.testimonials-swiper {
+  position: relative;
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 .testimonial-card {
@@ -133,14 +134,53 @@
 }
 
 /* ================================
+   CUSTOMIZAÇÃO DAS SETAS DO SWIPER
+   ================================ */
+
+.testimonials-swiper .swiper-button-next,
+.testimonials-swiper .swiper-button-prev {
+  color: #b08d3c; /* Cor dourada da marca */
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.testimonials-swiper .swiper-button-next:hover,
+.testimonials-swiper .swiper-button-prev:hover {
+  color: #8c6e2d; /* Tom um pouco mais escuro no hover */
+  transform: scale(1.1);
+}
+
+/* Altera o tamanho dos ícones das setas */
+.testimonials-swiper .swiper-button-next::after,
+.testimonials-swiper .swiper-button-prev::after {
+  font-size: 22px;
+  font-weight: bold;
+}
+
+/* Customização das bolinhas de paginação abaixo do carrossel */
+.testimonials-swiper .swiper-pagination-bullet {
+  background: #d4c29a;
+  opacity: 0.6;
+}
+
+.testimonials-swiper .swiper-pagination-bullet-active {
+  background: #b08d3c;
+  opacity: 1;
+}
+
+/* ================================
    RESPONSIVIDADE
    ================================ */
 
 @media (max-width: 900px) {
-  .testimonials-grid {
-    grid-template-columns: 1fr;
+  .testimonials-swiper {
     max-width: 550px;
     margin: 0 auto;
+  }
+
+  /* Em telas menores, podemos esconder as setas laterais para focar no toque/arrastar */
+  .testimonials-swiper .swiper-button-next,
+  .testimonials-swiper .swiper-button-prev {
+    display: none;
   }
 }
 

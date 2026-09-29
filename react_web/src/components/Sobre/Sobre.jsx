@@ -31,9 +31,6 @@ function About() {
             acessórios que combinam com o seu estilo.
           </p>
 
-          <a href="#contato" className="about-button">
-            Saiba mais
-          </a>
         </div>
 
       </div>
