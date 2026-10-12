@@ -1,0 +1,55 @@
+.admin-header {
+  min-height: 80px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 20px 35px;
+
+  box-sizing: border-box;
+
+  background: #ffffff;
+
+  border-bottom: 1px solid #eee8dd;
+}
+
+.admin-header-title {
+  margin: 0 0 5px;
+
+  color: #2f2a25;
+
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 22px;
+}
+
+.admin-header-subtitle {
+  margin: 0;
+
+  color: #8b8173;
+
+  font-size: 13px;
+}
+
+.admin-logout {
+  padding: 9px 20px;
+
+  background: transparent;
+
+  border: 1px solid #b08d3c;
+
+  color: #b08d3c;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.3s ease;
+}
+
+.admin-logout:hover {
+  background: #b08d3c;
+
+  color: #ffffff;
+}

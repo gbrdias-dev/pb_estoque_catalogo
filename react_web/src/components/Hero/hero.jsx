@@ -1,4 +1,5 @@
 import "./hero.css";
+import { Link } from "react-router-dom";
 import produto from "../../assets/imagens/brinco.png";
 
 
@@ -22,9 +23,10 @@ function Hero() {
           </p>
 
           {/* Botão que futuramente levará para o catálogo */}
-          <a href="/catalogo" className="hero-button">
+          <Link to="/catalogo" className="hero-button">
             Conheça nosso catálogo
-          </a>
+          </Link>
+
         </div>
 
         {/* Área reservada para a imagem do Hero */}

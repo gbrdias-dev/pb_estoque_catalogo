@@ -1,0 +1,172 @@
+.product-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+
+  background: #ffffff;
+  border: 1px solid #eee8dd;
+}
+
+.product-table {
+  width: 100%;
+  min-width: 800px;
+
+  border-collapse: collapse;
+}
+
+.product-table th {
+  padding: 16px 20px;
+
+  background: #faf8f4;
+
+  border-bottom: 1px solid #eee8dd;
+
+  color: #756b5e;
+
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.product-table td {
+  padding: 18px 20px;
+
+  border-bottom: 1px solid #f0ebe3;
+
+  color: #4b443c;
+
+  font-size: 14px;
+}
+
+.product-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.product-table tbody tr:hover {
+  background: #fdfbf8;
+}
+
+/* =========================
+   PRODUTO
+========================= */
+
+.admin-product-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-product-image {
+  width: 55px;
+  height: 55px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  background: #f7f3ec;
+
+  color: #a08c68;
+
+  font-size: 10px;
+  text-align: center;
+
+  overflow: hidden;
+}
+
+.admin-product-image img {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+}
+
+.admin-product-info strong {
+  color: #2f2a25;
+
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* =========================
+   STATUS
+========================= */
+
+.product-status {
+  display: inline-block;
+
+  padding: 5px 10px;
+
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.product-status.available {
+  background: #edf4ee;
+  color: #5f8064;
+}
+
+.product-status.unavailable {
+  background: #f7eeee;
+  color: #9b5b5b;
+}
+
+/* =========================
+   AÇÕES
+========================= */
+
+.product-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.product-actions button {
+  padding: 7px 12px;
+
+  background: transparent;
+
+  font-size: 12px;
+  font-weight: 500;
+
+  cursor: pointer;
+
+  transition: 0.3s ease;
+}
+
+.edit-button {
+  border: 1px solid #b08d3c;
+  color: #b08d3c;
+}
+
+.edit-button:hover {
+  background: #b08d3c;
+  color: #ffffff;
+}
+
+.delete-button {
+  border: 1px solid #c9a7a7;
+  color: #9b5b5b;
+}
+
+.delete-button:hover {
+  background: #9b5b5b;
+  border-color: #9b5b5b;
+  color: #ffffff;
+}
+
+/* =========================
+   VAZIO
+========================= */
+
+.product-table-empty {
+  padding: 50px !important;
+
+  color: #8b8173 !important;
+
+  text-align: center;
+}

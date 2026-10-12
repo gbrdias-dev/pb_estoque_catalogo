@@ -1,4 +1,5 @@
 import "./header.css";
+import { Link } from "react-router-dom";
 import logo from "../../assets/imagens/logo_p&b.png";
 import { FaInstagram } from 'react-icons/fa';
 
@@ -17,9 +18,8 @@ function Header() {
 
         {/* Menu principal */}
         <nav className="header-nav" aria-label="Navegação principal">
-          <a href="#inicio" className="active">Início</a>
-          <a href="#sobre">Sobre nós</a>
-          <a href="/catalogo">Catálogo</a>
+          <Link to="/">Inicio</Link>
+          <Link to="/catalogo">Catálogo</Link>
           <a href="#contato">Contato</a>
         </nav>
 
