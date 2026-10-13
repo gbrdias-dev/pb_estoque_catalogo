@@ -45,7 +45,6 @@ O React não se conectará diretamente ao PostgreSQL. As requisições serão en
 ### Área pública
 - Página inicial institucional;
 - Apresentação da marca;
-- Página “Sobre nós”;
 - Catálogo, pesquisa e filtros de produtos;
 - Página de detalhes do produto;
 - Links de contato e redes sociais.
