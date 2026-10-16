@@ -1,68 +1,79 @@
-import { useMemo, useState } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 
 import Sidebar from "../../components/Admin/Sidebar/sidebar";
 import AdminHeader from "../../components/Admin/AdminHeader/adminheader";
 
-import "./fornecedores.css";
+import {
+  getSuppliers,
+  createSupplier,
+  updateSupplier,
+  deleteSupplier,
+} from "../../services/api";
 
-const initialSuppliers = [
-  {
-    id: 1,
-    nome: "Elegance Acessórios",
-    contato: "Mariana Souza",
-    email: "contato@elegance.com.br",
-    telefone: "(71) 99999-1111",
-    observacoes: "Fornecedora de brincos e colares.",
-  },
-  {
-    id: 2,
-    nome: "Brilho Dourado",
-    contato: "Carlos Oliveira",
-    email: "vendas@brilhodourado.com.br",
-    telefone: "(71) 98888-2222",
-    observacoes: "Especializada em peças douradas.",
-  },
-  {
-    id: 3,
-    nome: "Pérolas & Cia",
-    contato: "Ana Martins",
-    email: "contato@perolasecia.com.br",
-    telefone: "(71) 97777-3333",
-    observacoes: "Fornece peças com pérolas.",
-  },
-];
+import "./fornecedores.css";
 
 const emptyForm = {
   nome: "",
-  contato: "",
-  email: "",
-  telefone: "",
-  observacoes: "",
+  site_fornecedor: "",
 };
 
 function Suppliers() {
-  const [suppliers, setSuppliers] = useState(initialSuppliers);
+  const [suppliers, setSuppliers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
-  const [formData, setFormData] = useState(emptyForm);
+  const [formData, setFormData] = useState({ ...emptyForm });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
-  // Pesquisa por nome, contato ou e-mail.
+  // Carrega os fornecedores cadastrados no banco.
+  async function loadSuppliers() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const data = await getSuppliers();
+      const list = Array.isArray(data)
+        ? data
+        : data.results || [];
+
+      setSuppliers(list);
+    } catch (err) {
+      setError(
+        "Não foi possível carregar os fornecedores. Verifique a conexão com a API."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadSuppliers();
+  }, []);
+
+  // Pesquisa por nome ou site.
   const filteredSuppliers = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
 
     return suppliers.filter((supplier) =>
       [
-        supplier.nome,
-        supplier.contato,
-        supplier.email,
-        supplier.telefone,
+        supplier.nome || "",
+        supplier.site_fornecedor || "",
       ].some((value) => value.toLowerCase().includes(term))
     );
   }, [suppliers, searchTerm]);
 
-  // Abre o formulário para um novo fornecedor.
+  // Indicadores.
+  const totalSuppliers = suppliers.length;
+
+  const suppliersWithSite = suppliers.filter(
+    (supplier) => (supplier.site_fornecedor || "").trim() !== ""
+  ).length;
+
+  // Abre o formulário para cadastrar.
   function handleAdd() {
     setEditingSupplier(null);
     setFormData({ ...emptyForm });
@@ -70,21 +81,20 @@ function Suppliers() {
     setIsFormOpen(true);
   }
 
-  // Abre o formulário preenchido para edição.
+  // Abre o formulário para editar.
   function handleEdit(supplier) {
     setEditingSupplier(supplier);
+
     setFormData({
-      nome: supplier.nome,
-      contato: supplier.contato,
-      email: supplier.email,
-      telefone: supplier.telefone,
-      observacoes: supplier.observacoes,
+      nome: supplier.nome || "",
+      site_fornecedor: supplier.site_fornecedor || "",
     });
+
     setError("");
     setIsFormOpen(true);
   }
 
-  // Atualiza os campos do formulário.
+  // Atualiza os campos.
   function handleChange(event) {
     const { name, value } = event.target;
 
@@ -94,64 +104,70 @@ function Suppliers() {
     }));
   }
 
-  // Salva um novo fornecedor ou atualiza um existente.
-  function handleSubmit(event) {
+  // Salva no PostgreSQL através da API Django.
+  async function handleSubmit(event) {
     event.preventDefault();
     setError("");
 
     const nome = formData.nome.trim();
-    const contato = formData.contato.trim();
-    const email = formData.email.trim();
-    const telefone = formData.telefone.trim();
+    const site_fornecedor = formData.site_fornecedor.trim();
 
-    if (!nome || !contato || !email || !telefone) {
-      setError("Preencha todos os campos obrigatórios.");
+    if (!nome || !site_fornecedor) {
+      setError("Preencha o nome e o site do fornecedor.");
       return;
     }
 
     const supplierData = {
-      ...formData,
       nome,
-      contato,
-      email,
-      telefone,
-      observacoes: formData.observacoes.trim(),
+      site_fornecedor,
     };
 
-    if (editingSupplier) {
-      setSuppliers((current) =>
-        current.map((supplier) =>
-          supplier.id === editingSupplier.id
-            ? { ...supplier, ...supplierData }
-            : supplier
-        )
-      );
-    } else {
-      setSuppliers((current) => [
-        ...current,
-        {
-          id: Date.now(),
-          ...supplierData,
-        },
-      ]);
-    }
+    setSaving(true);
 
-    setIsFormOpen(false);
-    setEditingSupplier(null);
-    setFormData({ ...emptyForm });
+    try {
+      if (editingSupplier) {
+        await updateSupplier(editingSupplier.id, supplierData);
+      } else {
+        await createSupplier(supplierData);
+      }
+
+      setIsFormOpen(false);
+      setEditingSupplier(null);
+      setFormData({ ...emptyForm });
+
+      await loadSuppliers();
+    } catch (err) {
+      setError(
+        err.message ||
+          "Não foi possível salvar o fornecedor. Verifique se você está autenticado."
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
-  // Exclui um fornecedor após confirmação.
-  function handleDelete(id) {
+  // Exclui o fornecedor do banco após confirmação.
+  async function handleDelete(id) {
     const confirmed = window.confirm(
       "Tem certeza que deseja excluir este fornecedor?"
     );
 
     if (!confirmed) return;
 
-    setSuppliers((current) =>
-      current.filter((supplier) => supplier.id !== id)
-    );
+    setError("");
+    setDeletingId(id);
+
+    try {
+      await deleteSupplier(id);
+      await loadSuppliers();
+    } catch (err) {
+      setError(
+        err.message ||
+          "Não foi possível excluir o fornecedor. Verifique se você está autenticado e se ele não está vinculado a produtos."
+      );
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   // Fecha o formulário sem salvar.
@@ -192,26 +208,28 @@ function Suppliers() {
             </button>
           </div>
 
+          {error && (
+            <p className="supplier-form-error" role="alert">
+              {error}
+            </p>
+          )}
+
           {/* Indicadores */}
           <section className="suppliers-summary">
             <article className="suppliers-summary-card">
               <span>Total de fornecedores</span>
-              <strong>{suppliers.length}</strong>
+              <strong>
+                {loading ? "..." : totalSuppliers}
+              </strong>
               <small>Fornecedores cadastrados</small>
             </article>
 
             <article className="suppliers-summary-card">
-              <span>Com contato completo</span>
+              <span>Com site cadastrado</span>
               <strong>
-                {
-                  suppliers.filter(
-                    (supplier) =>
-                      supplier.email.trim() &&
-                      supplier.telefone.trim()
-                  ).length
-                }
+                {loading ? "..." : suppliersWithSite}
               </strong>
-              <small>Com e-mail e telefone</small>
+              <small>Com site informado</small>
             </article>
           </section>
 
@@ -221,7 +239,7 @@ function Suppliers() {
               <div>
                 <h2>Lista de fornecedores</h2>
                 <p>
-                  Consulte os dados de contato dos seus parceiros.
+                  Consulte os dados dos seus fornecedores.
                 </p>
               </div>
             </div>
@@ -238,7 +256,7 @@ function Suppliers() {
                 onChange={(event) =>
                   setSearchTerm(event.target.value)
                 }
-                placeholder="Buscar por nome, contato ou e-mail..."
+                placeholder="Buscar por nome ou site..."
               />
             </div>
 
@@ -247,21 +265,25 @@ function Suppliers() {
                 <thead>
                   <tr>
                     <th>Fornecedor</th>
-                    <th>Contato</th>
-                    <th>E-mail</th>
-                    <th>Telefone</th>
+                    <th>Site</th>
                     <th>Ações</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {filteredSuppliers.length > 0 ? (
+                  {loading ? (
+                    <tr>
+                      <td colSpan="3" className="suppliers-empty">
+                        Carregando fornecedores...
+                      </td>
+                    </tr>
+                  ) : filteredSuppliers.length > 0 ? (
                     filteredSuppliers.map((supplier) => (
                       <tr key={supplier.id}>
                         <td>
                           <div className="supplier-name">
                             <div className="supplier-avatar">
-                              {supplier.nome
+                              {(supplier.nome || "?")
                                 .charAt(0)
                                 .toUpperCase()}
                             </div>
@@ -270,9 +292,25 @@ function Suppliers() {
                           </div>
                         </td>
 
-                        <td>{supplier.contato}</td>
-                        <td>{supplier.email}</td>
-                        <td>{supplier.telefone}</td>
+                        <td>
+                          {supplier.site_fornecedor ? (
+                            <a
+                              href={
+                                /^https?:\/\//i.test(
+                                  supplier.site_fornecedor
+                                )
+                                  ? supplier.site_fornecedor
+                                  : `https://${supplier.site_fornecedor}`
+                              }
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {supplier.site_fornecedor}
+                            </a>
+                          ) : (
+                            "Não informado"
+                          )}
+                        </td>
 
                         <td>
                           <div className="supplier-actions">
@@ -280,6 +318,7 @@ function Suppliers() {
                               type="button"
                               className="supplier-edit-button"
                               onClick={() => handleEdit(supplier)}
+                              disabled={deletingId === supplier.id}
                             >
                               Editar
                             </button>
@@ -290,8 +329,11 @@ function Suppliers() {
                               onClick={() =>
                                 handleDelete(supplier.id)
                               }
+                              disabled={deletingId === supplier.id}
                             >
-                              Excluir
+                              {deletingId === supplier.id
+                                ? "Excluindo..."
+                                : "Excluir"}
                             </button>
                           </div>
                         </td>
@@ -300,10 +342,12 @@ function Suppliers() {
                   ) : (
                     <tr>
                       <td
-                        colSpan="5"
+                        colSpan="3"
                         className="suppliers-empty"
                       >
-                        Nenhum fornecedor encontrado.
+                        {searchTerm
+                          ? "Nenhum fornecedor encontrado para essa busca."
+                          : "Nenhum fornecedor cadastrado."}
                       </td>
                     </tr>
                   )}
@@ -312,7 +356,7 @@ function Suppliers() {
             </div>
 
             <div className="suppliers-table-footer">
-              Exibindo {filteredSuppliers.length}{" "}
+              Exibindo {loading ? 0 : filteredSuppliers.length}{" "}
               {filteredSuppliers.length === 1
                 ? "fornecedor"
                 : "fornecedores"}
@@ -352,6 +396,7 @@ function Suppliers() {
                 className="supplier-modal-close"
                 onClick={handleCancel}
                 aria-label="Fechar formulário"
+                disabled={saving}
               >
                 ×
               </button>
@@ -368,7 +413,7 @@ function Suppliers() {
                     id="supplier-name"
                     name="nome"
                     type="text"
-                    maxLength={150}
+                    maxLength={100}
                     value={formData.nome}
                     onChange={handleChange}
                     placeholder="Nome da empresa"
@@ -376,70 +421,20 @@ function Suppliers() {
                   />
                 </div>
 
-                <div className="supplier-field">
-                  <label htmlFor="supplier-contact">
-                    Nome do contato *
+                <div className="supplier-field full-width">
+                  <label htmlFor="supplier-site">
+                    Site do fornecedor *
                   </label>
 
                   <input
-                    id="supplier-contact"
-                    name="contato"
+                    id="supplier-site"
+                    name="site_fornecedor"
                     type="text"
-                    maxLength={150}
-                    value={formData.contato}
+                    maxLength={255}
+                    value={formData.site_fornecedor}
                     onChange={handleChange}
-                    placeholder="Pessoa responsável"
+                    placeholder="www.fornecedor.com.br"
                     required
-                  />
-                </div>
-
-                <div className="supplier-field">
-                  <label htmlFor="supplier-phone">
-                    Telefone *
-                  </label>
-
-                  <input
-                    id="supplier-phone"
-                    name="telefone"
-                    type="tel"
-                    maxLength={30}
-                    value={formData.telefone}
-                    onChange={handleChange}
-                    placeholder="(71) 99999-9999"
-                    required
-                  />
-                </div>
-
-                <div className="supplier-field full-width">
-                  <label htmlFor="supplier-email">
-                    E-mail *
-                  </label>
-
-                  <input
-                    id="supplier-email"
-                    name="email"
-                    type="email"
-                    maxLength={254}
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="contato@fornecedor.com.br"
-                    required
-                  />
-                </div>
-
-                <div className="supplier-field full-width">
-                  <label htmlFor="supplier-notes">
-                    Observações
-                  </label>
-
-                  <textarea
-                    id="supplier-notes"
-                    name="observacoes"
-                    rows="3"
-                    maxLength={1000}
-                    value={formData.observacoes}
-                    onChange={handleChange}
-                    placeholder="Informações adicionais sobre o fornecedor..."
                   />
                 </div>
               </div>
@@ -455,6 +450,7 @@ function Suppliers() {
                   type="button"
                   className="supplier-cancel-button"
                   onClick={handleCancel}
+                  disabled={saving}
                 >
                   Cancelar
                 </button>
@@ -462,10 +458,13 @@ function Suppliers() {
                 <button
                   type="submit"
                   className="supplier-save-button"
+                  disabled={saving}
                 >
-                  {editingSupplier
-                    ? "Salvar alterações"
-                    : "Cadastrar fornecedor"}
+                  {saving
+                    ? "Salvando..."
+                    : editingSupplier
+                      ? "Salvar alterações"
+                      : "Cadastrar fornecedor"}
                 </button>
               </div>
             </form>

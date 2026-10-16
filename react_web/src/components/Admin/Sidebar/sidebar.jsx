@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-
+import logo from "../../../assets/imagens/logo_p&b.png";
 import "./sidebar.css";
 
 function Sidebar() {
@@ -7,7 +7,7 @@ function Sidebar() {
     <aside className="admin-sidebar">
 
       <div className="admin-sidebar-brand">
-        <span>P&B</span>
+        <img src={logo} alt="Logo P&B" className="admin-sidebar-logo" />
         <small>ADMIN</small>
       </div>
 

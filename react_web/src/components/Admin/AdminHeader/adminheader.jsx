@@ -6,7 +6,7 @@ function AdminHeader() {
   const navigate = useNavigate();
 
   function handleLogout() {
-    navigate("/login");
+    navigate("/acesso-pb");
   }
 
   return (

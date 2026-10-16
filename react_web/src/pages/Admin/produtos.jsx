@@ -1,65 +1,66 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import Sidebar from "../../components/Admin/Sidebar/sidebar";
 import AdminHeader from "../../components/Admin/AdminHeader/adminheader";
 import ProductTable from "../../components/Admin/ProductTable/ProductTable";
 import ProductForm from "../../components/Admin/ProductForm/ProductForm";
+
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} from "../../services/api";
+
 import "./produtos.css";
 
 function Products() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("todos");
 
-  // Controla a abertura e o fechamento do formulário.
   const [isFormOpen, setIsFormOpen] = useState(false);
-
-  // Armazena o produto que está sendo editado.
-  // null significa que estamos cadastrando um novo produto.
   const [editingProduct, setEditingProduct] = useState(null);
 
-  // Dados temporários para testar o front-end.
-  const [products, setProducts] = useState([
-    {
-      id: 1,
-      descricao: "Brinco Dourado",
-      preco: "49.90",
-      quantidade: 10,
-      imagem: "",
-    },
-    {
-      id: 2,
-      descricao: "Colar Dourado",
-      preco: "69.90",
-      quantidade: 5,
-      imagem: "",
-    },
-    {
-      id: 3,
-      descricao: "Pulseira Dourada",
-      preco: "39.90",
-      quantidade: 0,
-      imagem: "",
-    },
-    {
-      id: 4,
-      descricao: "Anel Dourado",
-      preco: "34.90",
-      quantidade: 8,
-      imagem: "",
-    },
-    {
-      id: 5,
-      descricao: "Brinco Pérola",
-      preco: "54.90",
-      quantidade: 3,
-      imagem: "",
-    },
-  ]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  // Busca os produtos reais da API Django.
+  const loadProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const data = await getProducts();
+
+      const productList = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.results)
+          ? data.results
+          : [];
+
+      setProducts(productList);
+    } catch (err) {
+      console.error("Erro ao carregar produtos:", err);
+      setError(
+        "Não foi possível carregar os produtos. Verifique se a API Django está funcionando."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
   // Filtra os produtos por descrição e disponibilidade.
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
-      const matchesSearch = product.descricao
+      const descricao = product.descricao ?? "";
+
+      const matchesSearch = descricao
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
 
@@ -75,66 +76,85 @@ function Products() {
     });
   }, [products, searchTerm, filter]);
 
-  // Abre o formulário para cadastrar um novo produto.
   function handleAdd() {
     setEditingProduct(null);
+    setError("");
     setIsFormOpen(true);
   }
 
-  // Abre o formulário preenchido com os dados do produto.
   function handleEdit(product) {
     setEditingProduct(product);
+    setError("");
     setIsFormOpen(true);
   }
 
-  // Salva um produto novo ou atualiza um produto existente.
-  function handleSave(productData) {
-    if (editingProduct) {
-      // Atualiza somente o produto selecionado.
-      setProducts((currentProducts) =>
-        currentProducts.map((product) =>
-          product.id === editingProduct.id
-            ? { ...product, ...productData }
-            : product
-        )
+  // O backend exige autenticação para cadastrar e editar.
+  async function handleSave(productData) {
+    if (saving) return;
+
+    try {
+      setSaving(true);
+      setError("");
+
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, productData);
+      } else {
+        await createProduct(productData);
+      }
+
+      await loadProducts();
+
+      setIsFormOpen(false);
+      setEditingProduct(null);
+    } catch (err) {
+      console.error("Erro ao salvar produto:", err);
+
+      if (err.message?.includes("401") || err.message?.includes("403")) {
+        throw new Error(
+          "A API recusou a operação. É necessário configurar a autenticação administrativa antes de cadastrar ou editar produtos."
+        );
+      }
+
+      throw new Error(
+        err.message || "Não foi possível salvar o produto."
       );
-    } else {
-      // Cria um novo produto com um identificador temporário.
-      const newProduct = {
-        id: Date.now(),
-        ...productData,
-      };
-
-      setProducts((currentProducts) => [
-        ...currentProducts,
-        newProduct,
-      ]);
+    } finally {
+      setSaving(false);
     }
-
-    // Fecha o formulário após salvar.
-    setIsFormOpen(false);
-    setEditingProduct(null);
   }
 
-  // Exclui um produto após confirmação.
-  function handleDelete(id) {
+  // A exclusão também exige autenticação no backend.
+  async function handleDelete(id) {
     const confirmed = window.confirm(
       "Tem certeza que deseja excluir este produto?"
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
-    setProducts((currentProducts) =>
-      currentProducts.filter((product) => product.id !== id)
-    );
+    try {
+      setError("");
+
+      await deleteProduct(id);
+      await loadProducts();
+    } catch (err) {
+      console.error("Erro ao excluir produto:", err);
+
+      if (err.message?.includes("401") || err.message?.includes("403")) {
+        setError(
+          "A API recusou a exclusão. É necessário configurar a autenticação administrativa."
+        );
+      } else {
+        setError(
+          err.message || "Não foi possível excluir o produto."
+        );
+      }
+    }
   }
 
-  // Fecha o formulário e limpa o produto selecionado.
   function handleCancelForm() {
     setIsFormOpen(false);
     setEditingProduct(null);
+    setError("");
   }
 
   return (
@@ -147,15 +167,12 @@ function Products() {
         <main className="products-page">
           <div className="products-page-header">
             <div>
-              <p className="dashboard-eyebrow">
-                GERENCIAMENTO
-              </p>
+              <p className="dashboard-eyebrow">GERENCIAMENTO</p>
 
               <h1>Produtos</h1>
 
               <p>
-                Cadastre, edite e gerencie os produtos
-                do catálogo.
+                Cadastre, edite e gerencie os produtos do catálogo.
               </p>
             </div>
 
@@ -187,9 +204,7 @@ function Products() {
               </div>
 
               <div className="products-filter">
-                <label htmlFor="product-filter">
-                  Status
-                </label>
+                <label htmlFor="product-filter">Status</label>
 
                 <select
                   id="product-filter"
@@ -199,35 +214,44 @@ function Products() {
                   }
                 >
                   <option value="todos">Todos</option>
-
-                  <option value="disponiveis">
-                    Disponíveis
-                  </option>
-
-                  <option value="indisponiveis">
-                    Indisponíveis
-                  </option>
+                  <option value="disponiveis">Disponíveis</option>
+                  <option value="indisponiveis">Indisponíveis</option>
                 </select>
               </div>
             </div>
 
-            <div className="products-count">
-              {filteredProducts.length}{" "}
-              {filteredProducts.length === 1
-                ? "produto"
-                : "produtos"}
-            </div>
+            {error && !isFormOpen && (
+              <div className="product-form-error" role="alert">
+                {error}
 
-            <ProductTable
-              products={filteredProducts}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
+                <button type="button" onClick={loadProducts}>
+                  Tentar novamente
+                </button>
+              </div>
+            )}
+
+            {loading ? (
+              <p>Carregando produtos...</p>
+            ) : (
+              <>
+                <div className="products-count">
+                  {filteredProducts.length}{" "}
+                  {filteredProducts.length === 1
+                    ? "produto"
+                    : "produtos"}
+                </div>
+
+                <ProductTable
+                  products={filteredProducts}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              </>
+            )}
           </section>
         </main>
       </div>
 
-      {/* Formulário de cadastro e edição */}
       {isFormOpen && (
         <ProductForm
           product={editingProduct}

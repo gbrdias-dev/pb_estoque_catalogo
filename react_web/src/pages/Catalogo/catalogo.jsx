@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 
 import Header from "../../components/Header/header";
 import Footer from "../../components/Footer/footer";
@@ -7,62 +8,49 @@ import ProductCard from "../../components/Catalogo/ProductCard/product_card";
 import ProductFilter from "../../components/Catalogo/ProductFilter/product_filter";
 import ProductSearch from "../../components/Catalogo/ProductSearch/product_search";
 
+import { getProducts } from "../../services/api";
+
 import "./catalogo.css";
 
 function Catalog() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("todos");
 
-  // Dados temporários.
-  // Posteriormente serão substituídos pelos dados vindos da API.
-  const products = [
-    {
-      id: 1,
-      descricao: "Brinco Dourado",
-      preco: "49.90",
-      quantidade: 10,
-      imagem: "",
-    },
-    {
-      id: 2,
-      descricao: "Colar Dourado",
-      preco: "69.90",
-      quantidade: 5,
-      imagem: "",
-    },
-    {
-      id: 3,
-      descricao: "Pulseira Dourada",
-      preco: "39.90",
-      quantidade: 0,
-      imagem: "",
-    },
-    {
-      id: 4,
-      descricao: "Anel Dourado",
-      preco: "34.90",
-      quantidade: 8,
-      imagem: "",
-    },
-    {
-      id: 5,
-      descricao: "Brinco Pérola",
-      preco: "54.90",
-      quantidade: 3,
-      imagem: "",
-    },
-    {
-      id: 6,
-      descricao: "Colar com Pingente",
-      preco: "79.90",
-      quantidade: 0,
-      imagem: "",
-    },
-  ];
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const data = await getProducts();
+
+        // A API do Django REST Framework retorna
+        // uma lista ou, com paginação, um objeto com results.
+        const productList = Array.isArray(data)
+          ? data
+          : data.results;
+
+        setProducts(Array.isArray(productList) ? productList : []);
+      } catch (err) {
+        console.error("Erro ao carregar produtos:", err);
+        setError("Não foi possível carregar os produtos. Tente novamente.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadProducts();
+  }, []);
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
-      const matchesSearch = product.descricao
+      const descricao = product.descricao ?? "";
+
+      const matchesSearch = descricao
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
 
@@ -87,9 +75,7 @@ function Catalog() {
       <main className="catalog">
         <section className="catalog-header">
           <div className="catalog-header-container">
-            <p className="catalog-eyebrow">
-              P&B BIJUTERIAS
-            </p>
+            <p className="catalog-eyebrow">P&B BIJUTERIAS</p>
 
             <h1>
               Nosso <span>catálogo</span>
@@ -104,7 +90,6 @@ function Catalog() {
 
         <section className="catalog-products">
           <div className="catalog-container">
-
             <div className="catalog-controls">
               <ProductSearch
                 searchTerm={searchTerm}
@@ -117,35 +102,47 @@ function Catalog() {
               />
             </div>
 
-            <div className="catalog-results">
-              <p>
-                {filteredProducts.length}{" "}
-                {filteredProducts.length === 1
-                  ? "produto encontrado"
-                  : "produtos encontrados"}
-              </p>
-            </div>
-
-            {filteredProducts.length > 0 ? (
-              <div className="product-grid">
-                {filteredProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                  />
-                ))}
+            {loading ? (
+              <div className="catalog-empty">
+                <p>Carregando produtos...</p>
+              </div>
+            ) : error ? (
+              <div className="catalog-empty">
+                <h2>Ops! Ocorreu um problema.</h2>
+                <p>{error}</p>
               </div>
             ) : (
-              <div className="catalog-empty">
-                <h2>Nenhum produto encontrado</h2>
+              <>
+                <div className="catalog-results">
+                  <p>
+                    {filteredProducts.length}{" "}
+                    {filteredProducts.length === 1
+                      ? "produto encontrado"
+                      : "produtos encontrados"}
+                  </p>
+                </div>
 
-                <p>
-                  Tente buscar por outro produto ou
-                  alterar o filtro selecionado.
-                </p>
-              </div>
+                {filteredProducts.length > 0 ? (
+                  <div className="product-grid">
+                    {filteredProducts.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="catalog-empty">
+                    <h2>Nenhum produto encontrado</h2>
+                    <p>
+                      {products.length === 0
+                        ? "Nosso catálogo está sendo preparado. Em breve teremos novidades!"
+                        : "Tente buscar por outro produto ou alterar o filtro selecionado."}
+                    </p>
+                  </div>
+                )}
+              </>
             )}
-
           </div>
         </section>
       </main>

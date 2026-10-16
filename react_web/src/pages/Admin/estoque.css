@@ -299,3 +299,8 @@
     grid-template-columns: 1fr;
   }
 }
+
+.stock-error {
+  color: #b42318;
+  margin: 16px 0;
+}

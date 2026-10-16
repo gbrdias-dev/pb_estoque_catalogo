@@ -1,15 +1,13 @@
+
+import { Link } from "react-router-dom";
 import "./product_card.css";
 
 function ProductCard({ product }) {
+  const disponivel = product.quantidade > 0;
+
   return (
     <article className="product-card">
-
-      {/* ================================
-          IMAGEM DO PRODUTO
-          ================================ */}
-
       <div className="product-card-image">
-
         {product.imagem ? (
           <img
             src={product.imagem}
@@ -20,32 +18,19 @@ function ProductCard({ product }) {
             Imagem do produto
           </div>
         )}
-
       </div>
 
-
-      {/* ================================
-          INFORMAÇÕES DO PRODUTO
-          ================================ */}
-
       <div className="product-card-content">
-
-        <h3>
-          {product.descricao}
-        </h3>
+        <h3>{product.descricao}</h3>
 
         <p className="product-card-price">
-          R$ {Number(product.preco)
+          R${" "}
+          {Number(product.preco)
             .toFixed(2)
             .replace(".", ",")}
         </p>
 
-
-        {/* ================================
-            STATUS
-            ================================ */}
-
-        {product.quantidade > 0 ? (
+        {disponivel ? (
           <span className="product-card-status available">
             Disponível
           </span>
@@ -55,20 +40,13 @@ function ProductCard({ product }) {
           </span>
         )}
 
-
-        {/* ================================
-            BOTÃO
-            ================================ */}
-
-        <a
-          href={`/produto/${product.id}`}
+        <Link
+          to={`/produto/${product.id}`}
           className="product-card-button"
         >
           Ver produto
-        </a>
-
+        </Link>
       </div>
-
     </article>
   );
 }

@@ -1,66 +1,77 @@
-import { useMemo, useState } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 
 import Sidebar from "../../components/Admin/Sidebar/sidebar";
 import AdminHeader from "../../components/Admin/AdminHeader/adminheader";
 
+import {
+  getProducts,
+  updateProductStock,
+} from "../../services/api";
+
 import "./estoque.css";
 
-// Dados fictícios para testar a interface.
-// Depois, serão substituídos pelos dados da API Django.
-const initialProducts = [
-  {
-    id: 1,
-    descricao: "Brinco Dourado",
-    preco: "49.90",
-    quantidade: 10,
-  },
-  {
-    id: 2,
-    descricao: "Colar Dourado",
-    preco: "69.90",
-    quantidade: 5,
-  },
-  {
-    id: 3,
-    descricao: "Pulseira Dourada",
-    preco: "39.90",
-    quantidade: 0,
-  },
-  {
-    id: 4,
-    descricao: "Anel Dourado",
-    preco: "34.90",
-    quantidade: 8,
-  },
-  {
-    id: 5,
-    descricao: "Brinco Pérola",
-    preco: "54.90",
-    quantidade: 3,
-  },
-  {
-    id: 6,
-    descricao: "Colar com Pingente",
-    preco: "79.90",
-    quantidade: 0,
-  },
-];
-
 function Stock() {
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("todos");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [savingIds, setSavingIds] = useState([]);
+
+  // Carrega os produtos reais da API Django.
+  useEffect(() => {
+    let active = true;
+
+    async function loadProducts() {
+      try {
+        const data = await getProducts();
+
+        const productList = Array.isArray(data)
+          ? data
+          : data.results || [];
+
+        if (active) {
+          setProducts(
+            productList.map((product) => ({
+              ...product,
+              quantidade: Number(product.quantidade),
+            }))
+          );
+          setError("");
+        }
+      } catch (err) {
+        if (active) {
+          setError(
+            "Não foi possível carregar os produtos. Tente atualizar a página."
+          );
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadProducts();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Define a situação do estoque de cada produto.
   function getStockStatus(quantity) {
-    if (quantity === 0) {
+    const amount = Number(quantity);
+
+    if (amount === 0) {
       return {
         label: "Sem estoque",
         className: "stock-status-unavailable",
       };
     }
 
-    if (quantity <= 3) {
+    if (amount <= 3) {
       return {
         label: "Estoque baixo",
         className: "stock-status-low",
@@ -73,45 +84,48 @@ function Stock() {
     };
   }
 
-  // Calcula os indicadores com base nos produtos.
+  // Indicadores calculados com base nos dados reais.
   const totalProducts = products.length;
 
   const availableProducts = products.filter(
-    (product) => product.quantidade > 0
+    (product) => Number(product.quantidade) > 0
   ).length;
 
   const lowStockProducts = products.filter(
     (product) =>
-      product.quantidade > 0 && product.quantidade <= 3
+      Number(product.quantidade) > 0 &&
+      Number(product.quantidade) <= 3
   ).length;
 
   const unavailableProducts = products.filter(
-    (product) => product.quantidade === 0
+    (product) => Number(product.quantidade) === 0
   ).length;
 
-  // Pesquisa por descrição e aplica o filtro selecionado.
+  // Pesquisa e filtros.
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
-      const matchesSearch = product.descricao
+      const description = String(product.descricao || "");
+
+      const matchesSearch = description
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
 
+      const quantity = Number(product.quantidade);
       let matchesFilter = true;
 
       if (filter === "disponiveis") {
-        matchesFilter = product.quantidade > 3;
+        matchesFilter = quantity > 3;
       } else if (filter === "baixo") {
-        matchesFilter =
-          product.quantidade > 0 && product.quantidade <= 3;
+        matchesFilter = quantity > 0 && quantity <= 3;
       } else if (filter === "indisponiveis") {
-        matchesFilter = product.quantidade === 0;
+        matchesFilter = quantity === 0;
       }
 
       return matchesSearch && matchesFilter;
     });
   }, [products, searchTerm, filter]);
 
-  // Atualiza a quantidade localmente.
+  // Atualiza temporariamente a quantidade no formulário.
   function handleQuantityChange(id, value) {
     if (value === "") {
       setProducts((currentProducts) =>
@@ -121,6 +135,7 @@ function Stock() {
             : product
         )
       );
+
       return;
     }
 
@@ -139,15 +154,80 @@ function Stock() {
     );
   }
 
-  // Impede que uma quantidade fique vazia ao sair do campo.
-  function handleQuantityBlur(id) {
+  // Salva a quantidade no PostgreSQL por meio da API.
+  async function handleQuantityBlur(id) {
+    const product = products.find(
+      (item) => item.id === id
+    );
+
+    if (!product || savingIds.includes(id)) {
+      return;
+    }
+
+    const quantity =
+      product.quantidade === ""
+        ? 0
+        : Number(product.quantidade);
+
+    if (!Number.isInteger(quantity) || quantity < 0) {
+      setError("Informe uma quantidade inteira igual ou maior que zero.");
+      return;
+    }
+
     setProducts((currentProducts) =>
-      currentProducts.map((product) =>
-        product.id === id && product.quantidade === ""
-          ? { ...product, quantidade: 0 }
-          : product
+      currentProducts.map((item) =>
+        item.id === id
+          ? { ...item, quantidade: quantity }
+          : item
       )
     );
+
+    setSavingIds((currentIds) => [...currentIds, id]);
+    setError("");
+
+    try {
+      const updated = await updateProductStock(id, quantity);
+
+      setProducts((currentProducts) =>
+        currentProducts.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                ...updated,
+                quantidade: Number(
+                  updated?.quantidade ?? quantity
+                ),
+              }
+            : item
+        )
+      );
+    } catch (err) {
+      setError(
+        `Não foi possível salvar a quantidade de "${product.descricao}". Os dados serão recarregados.`
+      );
+
+      // Recupera os valores que realmente estão salvos na API.
+      try {
+        const data = await getProducts();
+
+        const productList = Array.isArray(data)
+          ? data
+          : data.results || [];
+
+        setProducts(
+          productList.map((item) => ({
+            ...item,
+            quantidade: Number(item.quantidade),
+          }))
+        );
+      } catch (reloadError) {
+        // Mantém a mensagem de erro original caso a recarga falhe.
+      }
+    } finally {
+      setSavingIds((currentIds) =>
+        currentIds.filter((savingId) => savingId !== id)
+      );
+    }
   }
 
   return (
@@ -173,6 +253,12 @@ function Stock() {
             </div>
           </div>
 
+          {error && (
+            <p role="alert" className="stock-error">
+              {error}
+            </p>
+          )}
+
           {/* Indicadores do estoque */}
           <section className="stock-summary">
             <article className="stock-summary-card">
@@ -180,7 +266,9 @@ function Stock() {
                 Total de produtos
               </span>
 
-              <strong>{totalProducts}</strong>
+              <strong>
+                {loading ? "..." : totalProducts}
+              </strong>
 
               <span className="stock-summary-description">
                 Produtos cadastrados
@@ -192,7 +280,9 @@ function Stock() {
                 Disponíveis
               </span>
 
-              <strong>{availableProducts}</strong>
+              <strong>
+                {loading ? "..." : availableProducts}
+              </strong>
 
               <span className="stock-summary-description">
                 Com pelo menos uma unidade
@@ -204,7 +294,9 @@ function Stock() {
                 Estoque baixo
               </span>
 
-              <strong>{lowStockProducts}</strong>
+              <strong>
+                {loading ? "..." : lowStockProducts}
+              </strong>
 
               <span className="stock-summary-description">
                 De 1 a 3 unidades
@@ -216,7 +308,9 @@ function Stock() {
                 Sem estoque
               </span>
 
-              <strong>{unavailableProducts}</strong>
+              <strong>
+                {loading ? "..." : unavailableProducts}
+              </strong>
 
               <span className="stock-summary-description">
                 Precisam de reposição
@@ -265,11 +359,18 @@ function Stock() {
                     setFilter(event.target.value)
                   }
                 >
-                  <option value="todos">Todas as situações</option>
+                  <option value="todos">
+                    Todas as situações
+                  </option>
+
                   <option value="disponiveis">
                     Disponíveis (mais de 3)
                   </option>
-                  <option value="baixo">Estoque baixo</option>
+
+                  <option value="baixo">
+                    Estoque baixo
+                  </option>
+
                   <option value="indisponiveis">
                     Sem estoque
                   </option>
@@ -289,13 +390,23 @@ function Stock() {
                 </thead>
 
                 <tbody>
-                  {filteredProducts.length > 0 ? (
+                  {loading ? (
+                    <tr>
+                      <td
+                        colSpan="4"
+                        className="stock-table-empty"
+                      >
+                        Carregando produtos...
+                      </td>
+                    </tr>
+                  ) : filteredProducts.length > 0 ? (
                     filteredProducts.map((product) => {
-                      const status = getStockStatus(
+                      const quantity =
                         product.quantidade === ""
                           ? 0
-                          : product.quantidade
-                      );
+                          : Number(product.quantidade);
+
+                      const status = getStockStatus(quantity);
 
                       return (
                         <tr key={product.id}>
@@ -304,10 +415,13 @@ function Stock() {
                           </td>
 
                           <td>
-                            R${" "}
-                            {Number(product.preco)
-                              .toFixed(2)
-                              .replace(".", ",")}
+                            {Number(product.preco).toLocaleString(
+                              "pt-BR",
+                              {
+                                style: "currency",
+                                currency: "BRL",
+                              }
+                            )}
                           </td>
 
                           <td>
@@ -318,6 +432,7 @@ function Stock() {
                               step="1"
                               aria-label={`Quantidade de ${product.descricao}`}
                               value={product.quantidade}
+                              disabled={savingIds.includes(product.id)}
                               onChange={(event) =>
                                 handleQuantityChange(
                                   product.id,
@@ -334,7 +449,9 @@ function Stock() {
                             <span
                               className={`stock-status ${status.className}`}
                             >
-                              {status.label}
+                              {savingIds.includes(product.id)
+                                ? "Salvando..."
+                                : status.label}
                             </span>
                           </td>
                         </tr>
@@ -355,7 +472,7 @@ function Stock() {
             </div>
 
             <div className="stock-table-footer">
-              Exibindo {filteredProducts.length}{" "}
+              Exibindo {loading ? 0 : filteredProducts.length}{" "}
               {filteredProducts.length === 1
                 ? "produto"
                 : "produtos"}

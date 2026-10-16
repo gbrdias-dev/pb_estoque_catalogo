@@ -1,6 +1,8 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-
+import logo from "../../assets/imagens/logo_p&b.png";
+import { loginAdmin } from "../../services/api";
 import "./login.css";
 
 function Login() {
@@ -9,36 +11,34 @@ function Login() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     setError("");
+    setLoading(true);
 
-    // Autenticação temporária.
-    // Posteriormente será substituída pela API do Django.
-    if (
-      email === "admin@pbbijuterias.com" &&
-      senha === "123456"
-    ) {
-      navigate("/admin");
-      return;
+    try {
+      await loginAdmin(email.trim(), senha);
+      navigate("/admin", { replace: true });
+    } catch (err) {
+      setError(
+        err.message || "Não foi possível realizar o login."
+      );
+    } finally {
+      setLoading(false);
     }
-
-    setError("E-mail ou senha incorretos.");
   }
 
   return (
     <main className="login-page">
       <div className="login-container">
-
         <div className="login-brand">
-          <span>P&B</span>
-          <p>BIJUTERIAS</p>
+          <img src={logo} alt="Logo P&B Bijuterias" className="login-logo" />
         </div>
 
         <div className="login-card">
-
           <div className="login-header">
             <p className="login-eyebrow">
               ÁREA ADMINISTRATIVA
@@ -52,43 +52,36 @@ function Login() {
           </div>
 
           <form onSubmit={handleSubmit}>
-
             <div className="login-field">
-              <label htmlFor="email">
-                E-mail
-              </label>
+              <label htmlFor="email">E-mail</label>
 
               <input
                 id="email"
                 type="email"
+                autoComplete="username"
                 value={email}
-                onChange={(event) =>
-                  setEmail(event.target.value)
-                }
+                onChange={(event) => setEmail(event.target.value)}
                 placeholder="Digite seu e-mail"
                 required
               />
             </div>
 
             <div className="login-field">
-              <label htmlFor="senha">
-                Senha
-              </label>
+              <label htmlFor="senha">Senha</label>
 
               <input
                 id="senha"
                 type="password"
+                autoComplete="current-password"
                 value={senha}
-                onChange={(event) =>
-                  setSenha(event.target.value)
-                }
+                onChange={(event) => setSenha(event.target.value)}
                 placeholder="Digite sua senha"
                 required
               />
             </div>
 
             {error && (
-              <p className="login-error">
+              <p className="login-error" role="alert">
                 {error}
               </p>
             )}
@@ -96,21 +89,16 @@ function Login() {
             <button
               type="submit"
               className="login-button"
+              disabled={loading}
             >
-              Entrar
+              {loading ? "Entrando..." : "Entrar"}
             </button>
-
           </form>
 
-          <Link
-            to="/"
-            className="login-back"
-          >
+          <Link to="/" className="login-back">
             ← Voltar para o site
           </Link>
-
         </div>
-
       </div>
     </main>
   );
