@@ -9,18 +9,32 @@ import { getProductById } from "../../services/api";
 
 import "./ProductDetails.css";
 
+const API_BASE_URL = "http://localhost:8000";
+
+function getImageUrl(imagem) {
+  if (!imagem) return null;
+
+  if (imagem.startsWith("http://") || imagem.startsWith("https://")) {
+    return imagem;
+  }
+
+  return `${API_BASE_URL}${imagem.startsWith("/") ? "" : "/"}${imagem}`;
+}
+
 function ProductDetails() {
   const { id } = useParams();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     async function loadProduct() {
       try {
         setLoading(true);
         setError("");
+        setImageError(false);
 
         const data = await getProductById(id);
         setProduct(data);
@@ -34,6 +48,8 @@ function ProductDetails() {
 
     loadProduct();
   }, [id]);
+
+  const imageUrl = getImageUrl(product?.imagem);
 
   return (
     <>
@@ -54,13 +70,14 @@ function ProductDetails() {
               <h1>Produto indisponível</h1>
               <p>{error}</p>
             </div>
-          ) : (
+          ) : product ? (
             <div className="product-details-content">
               <div className="product-details-image">
-                {product.imagem ? (
+                {imageUrl && !imageError ? (
                   <img
-                    src={product.imagem}
-                    alt={product.descricao}
+                    src={imageUrl}
+                    alt={product.descricao || "Imagem do produto"}
+                    onError={() => setImageError(true)}
                   />
                 ) : (
                   <div className="product-details-placeholder">
@@ -85,12 +102,12 @@ function ProductDetails() {
 
                 <span
                   className={`product-details-status ${
-                    product.quantidade > 0
+                    Number(product.quantidade) > 0
                       ? "available"
                       : "unavailable"
                   }`}
                 >
-                  {product.quantidade > 0
+                  {Number(product.quantidade) > 0
                     ? "Disponível"
                     : "Indisponível"}
                 </span>
@@ -100,7 +117,7 @@ function ProductDetails() {
                   estilo e valorizar seus momentos.
                 </p>
 
-                {product.quantidade > 0 && (
+                {Number(product.quantidade) > 0 && (
                   <p className="product-details-stock">
                     Disponibilidade sujeita à confirmação.
                   </p>
@@ -113,6 +130,11 @@ function ProductDetails() {
                   Continuar explorando
                 </Link>
               </div>
+            </div>
+          ) : (
+            <div className="product-details-message">
+              <h1>Produto não encontrado</h1>
+              <p>Não encontramos esse produto no catálogo.</p>
             </div>
           )}
         </div>

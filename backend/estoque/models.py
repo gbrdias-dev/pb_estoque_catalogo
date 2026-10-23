@@ -74,6 +74,13 @@ class Produto(models.Model):
         null=True,
     )
 
+    imagem = models.ImageField(
+    upload_to="produtos/",
+    blank=True,
+    null=True,
+    db_column="imagem_produto"
+)
+
     class Meta:
         managed = False
         db_table = "produto"
@@ -88,7 +95,11 @@ class Reposicao(models.Model):
         models.DO_NOTHING,
         db_column="id_produto",
     )
-    valor_compra = models.DecimalField(max_digits=10, decimal_places=2)
+    quantidade = models.IntegerField()
+    valor_compra = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+    )
     id_usuario = models.ForeignKey(
         Usuario,
         models.DO_NOTHING,
@@ -99,3 +110,9 @@ class Reposicao(models.Model):
     class Meta:
         managed = False
         db_table = "reposicao"
+
+    def __str__(self):
+        return f"Reposição do produto {self.id_produto_id}"
+
+
+

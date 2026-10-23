@@ -1,17 +1,29 @@
+
 import { useNavigate } from "react-router-dom";
+import { logoutAdmin } from "../../../services/api";
 
 import "./adminheader.css";
 
 function AdminHeader() {
   const navigate = useNavigate();
 
-  function handleLogout() {
-    navigate("/acesso-pb");
+  async function handleLogout() {
+    try {
+      // Encerra a sessão no Django
+      await logoutAdmin();
+
+      // Redireciona somente após confirmar a resposta
+      navigate("/acesso-pb", { replace: true });
+    } catch (error) {
+      console.error("Erro ao encerrar a sessão:", error);
+      alert(
+        "Não foi possível encerrar a sessão. Verifique sua conexão e tente novamente."
+      );
+    }
   }
 
   return (
     <header className="admin-header">
-
       <div>
         <p className="admin-header-title">
           Painel administrativo
@@ -29,7 +41,6 @@ function AdminHeader() {
       >
         Sair
       </button>
-
     </header>
   );
 }

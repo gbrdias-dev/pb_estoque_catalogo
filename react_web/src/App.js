@@ -8,6 +8,7 @@ import Dashboard from "./pages/Admin/dashboard.jsx";
 import Products from "./pages/Admin/produtos.jsx";
 import Stock from "./pages/Admin/estoque.jsx";
 import Suppliers from "./pages/Admin/fornecedores.jsx";
+import Usuarios from "./pages/Admin/usuarios.jsx";
 import ProductDetails from "./pages/Produto/ProductDetails";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -27,6 +28,7 @@ function App() {
           <Route path="/admin/produtos" element={<Products />} />
           <Route path="/admin/estoque" element={<Stock />} />
           <Route path="/admin/fornecedores" element={<Suppliers />} />
+          <Route path="/admin/usuarios" element={<Usuarios />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -48,6 +48,15 @@ function Sidebar() {
         >
           Fornecedores
         </NavLink>
+
+      <NavLink
+       to="/admin/usuarios"
+       className={({ isActive }) =>
+       isActive ? "active" : ""
+      }
+      >
+      Usuários
+     </NavLink>
       </nav>
 
       <div className="admin-sidebar-footer">

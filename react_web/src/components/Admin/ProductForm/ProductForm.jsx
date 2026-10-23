@@ -1,7 +1,9 @@
+
 import { useEffect, useState } from "react";
 import {
   getCategories,
   getCollections,
+  createCollection,
   getSuppliers,
 } from "../../../services/api";
 import "./ProductForm.css";
@@ -9,7 +11,7 @@ import "./ProductForm.css";
 const initialForm = {
   descricao: "",
   preco: "",
-  quantidade: "",
+  quantidade: "0",
   id_categoria: "",
   id_colecao: "",
   id_fornecedora: "",
@@ -24,16 +26,21 @@ function getList(data) {
 
 function ProductForm({ product, onSave, onCancel }) {
   const [formData, setFormData] = useState(initialForm);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
 
   const [categories, setCategories] = useState([]);
   const [collections, setCollections] = useState([]);
+  const [showCollectionForm, setShowCollectionForm] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState("");
+  const [creatingCollection, setCreatingCollection] = useState(false);
   const [suppliers, setSuppliers] = useState([]);
 
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Carrega as opções disponíveis no PostgreSQL através da API.
+  // Carrega categorias, coleções e fornecedoras pela API.
   useEffect(() => {
     let active = true;
 
@@ -63,9 +70,7 @@ function ProductForm({ product, onSave, onCancel }) {
           );
         }
       } finally {
-        if (active) {
-          setLoadingOptions(false);
-        }
+        if (active) setLoadingOptions(false);
       }
     }
 
@@ -76,24 +81,37 @@ function ProductForm({ product, onSave, onCancel }) {
     };
   }, []);
 
-  // Preenche o formulário quando um produto é selecionado para edição.
+  // Preenche o formulário ao editar um produto.
+  // A quantidade em estoque não é editada nesta tela.
   useEffect(() => {
     if (product) {
       setFormData({
         descricao: product.descricao ?? "",
         preco: product.preco ?? "",
-        quantidade: product.quantidade ?? "",
         id_categoria: product.id_categoria ?? "",
         id_colecao: product.id_colecao ?? "",
         id_fornecedora: product.id_fornecedora ?? "",
         url_fornecedor: product.url_fornecedor ?? "",
       });
+
+      setImagePreview(product.imagem ?? "");
     } else {
       setFormData({ ...initialForm });
+      setImagePreview("");
     }
 
+    setImageFile(null);
     setError("");
   }, [product]);
+
+  // Libera URLs temporárias de imagens.
+  useEffect(() => {
+    return () => {
+      if (imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -104,12 +122,84 @@ function ProductForm({ product, onSave, onCancel }) {
     }));
   }
 
+  async function handleCreateCollection() {
+    const nome = newCollectionName.trim();
+
+    if (!nome) {
+      setError("Informe o nome da coleção.");
+      return;
+    }
+
+    setCreatingCollection(true);
+    setError("");
+
+    try {
+      const created = await createCollection({ nome });
+      const newCollection = created?.results?.[0] ?? created;
+
+      if (!newCollection?.id) {
+        throw new Error(
+          "A coleção foi enviada, mas a API não retornou seu ID."
+        );
+      }
+
+      setCollections((current) => [
+        ...current.filter((item) => item.id !== newCollection.id),
+        newCollection,
+      ]);
+
+      setFormData((current) => ({
+        ...current,
+        id_colecao: String(newCollection.id),
+      }));
+
+      setNewCollectionName("");
+      setShowCollectionForm(false);
+    } catch (err) {
+      const detail =
+        err.data && typeof err.data === "object"
+          ? Object.values(err.data).flat().join(" ")
+          : "";
+
+      setError(
+        detail || err.message || "Não foi possível criar a coleção."
+      );
+    } finally {
+      setCreatingCollection(false);
+    }
+  }
+
+  function handleImageChange(event) {
+    const file = event.target.files?.[0];
+    setError("");
+
+    if (!file) {
+      setImageFile(null);
+      setImagePreview(product?.imagem ?? "");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setError("Selecione um arquivo de imagem válido.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("A imagem deve ter no máximo 5 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
 
     const preco = Number(formData.preco);
-    const quantidade = Number(formData.quantidade);
 
     if (!formData.descricao.trim()) {
       setError("Informe a descrição do produto.");
@@ -126,17 +216,23 @@ function ProductForm({ product, onSave, onCancel }) {
       !Number.isFinite(preco) ||
       preco < 0
     ) {
-      setError("Informe um preço válido.");
+      setError("Informe um preço de venda válido.");
       return;
     }
 
+    // A quantidade inicial só pode ser informada ao cadastrar.
+    const quantidadeInicial = Number(formData.quantidade);
+
     if (
-      formData.quantidade === "" ||
-      !Number.isInteger(quantidade) ||
-      quantidade < 0
+      !product &&
+      (
+        formData.quantidade === "" ||
+        !Number.isInteger(quantidadeInicial) ||
+        quantidadeInicial < 0
+      )
     ) {
       setError(
-        "Informe uma quantidade inteira igual ou maior que zero."
+        "Informe uma quantidade inicial inteira igual ou maior que zero."
       );
       return;
     }
@@ -146,25 +242,58 @@ function ProductForm({ product, onSave, onCancel }) {
       !formData.id_colecao ||
       !formData.id_fornecedora
     ) {
-      setError("Selecione uma categoria, uma coleção e uma fornecedora.");
+      setError(
+        "Selecione uma categoria, uma coleção e uma fornecedora."
+      );
       return;
     }
 
-    const productData = {
-      descricao: formData.descricao.trim(),
-      preco: preco.toFixed(2),
-      quantidade,
-      id_categoria: Number(formData.id_categoria),
-      id_colecao: Number(formData.id_colecao),
-      id_fornecedora: Number(formData.id_fornecedora),
-      url_fornecedor: formData.url_fornecedor.trim() || null,
-    };
+    // Envia os dados do produto sem alterar a quantidade em estoque.
+    const productData = new FormData();
+
+    productData.append("descricao", formData.descricao.trim());
+    productData.append("preco", preco.toFixed(2));
+
+    // Envia a quantidade somente na criação; edição não altera o estoque.
+    if (!product) {
+      productData.append("quantidade", String(quantidadeInicial));
+    }
+
+    productData.append("id_categoria", String(formData.id_categoria));
+    productData.append("id_colecao", String(formData.id_colecao));
+    productData.append(
+      "id_fornecedora",
+      String(formData.id_fornecedora)
+    );
+    productData.append(
+      "url_fornecedor",
+      formData.url_fornecedor.trim()
+    );
+
+    if (imageFile) {
+      productData.append("imagem", imageFile);
+    }
 
     try {
       setSaving(true);
       await onSave(productData);
     } catch (err) {
-      setError(err.message || "Não foi possível salvar o produto.");
+      const details =
+        err.data && typeof err.data === "object"
+          ? Object.entries(err.data)
+              .map(([field, messages]) => {
+                const text = Array.isArray(messages)
+                  ? messages.join(" ")
+                  : String(messages);
+
+                return `${field}: ${text}`;
+              })
+              .join(" ")
+          : "";
+
+      setError(
+        details || err.message || "Não foi possível salvar o produto."
+      );
     } finally {
       setSaving(false);
     }
@@ -230,8 +359,63 @@ function ProductForm({ product, onSave, onCancel }) {
                   />
                 </div>
 
-                <div className="product-form-field">
-                  <label htmlFor="preco">Preço (R$) *</label>
+                <div className="product-form-field full-width">
+                  <label htmlFor="imagem">Foto do produto</label>
+
+                  <input
+                    id="imagem"
+                    name="imagem"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                  />
+
+                  <small>
+                    Formatos de imagem aceitos; tamanho máximo de 5 MB.
+                  </small>
+
+                  {imagePreview && (
+                    <div className="product-image-preview">
+                      <img
+                        src={imagePreview}
+                        alt={`Prévia de ${
+                          formData.descricao || "produto"
+                        }`}
+                        style={{
+                          display: "block",
+                          width: "150px",
+                          height: "150px",
+                          marginTop: "12px",
+                          objectFit: "contain",
+                          borderRadius: "8px",
+                        }}
+                      />
+
+                      {imageFile && (
+                        <button
+                          type="button"
+                          className="product-form-cancel"
+                          onClick={() => {
+                            setImageFile(null);
+                            setImagePreview(product?.imagem ?? "");
+
+                            const input =
+                              document.getElementById("imagem");
+
+                            if (input) input.value = "";
+                          }}
+                        >
+                          Remover nova foto
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="product-form-field full-width">
+                  <label htmlFor="preco">
+                    Preço de venda (R$) *
+                  </label>
 
                   <input
                     id="preco"
@@ -246,23 +430,29 @@ function ProductForm({ product, onSave, onCancel }) {
                   />
                 </div>
 
-                <div className="product-form-field">
-                  <label htmlFor="quantidade">
-                    Quantidade em estoque *
-                  </label>
+                {!product && (
+                  <div className="product-form-field">
+                    <label htmlFor="quantidade">
+                      Quantidade inicial em estoque *
+                    </label>
 
-                  <input
-                    id="quantidade"
-                    name="quantidade"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={formData.quantidade}
-                    onChange={handleChange}
-                    placeholder="10"
-                    required
-                  />
-                </div>
+                    <input
+                      id="quantidade"
+                      name="quantidade"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={formData.quantidade}
+                      onChange={handleChange}
+                      placeholder="Ex.: 10"
+                      required
+                    />
+
+                    <small>
+                      Depois do cadastro, altere o estoque somente na tela Estoque.
+                    </small>
+                  </div>
+                )}
 
                 <div className="product-form-field">
                   <label htmlFor="id_categoria">Categoria *</label>
@@ -304,6 +494,69 @@ function ProductForm({ product, onSave, onCancel }) {
                       </option>
                     ))}
                   </select>
+
+                  <button
+                    type="button"
+                    className="product-form-cancel"
+                    onClick={() => {
+                      setError("");
+                      setShowCollectionForm((current) => !current);
+                    }}
+                    style={{ marginTop: "8px" }}
+                  >
+                    {showCollectionForm
+                      ? "Cancelar criação"
+                      : "+ Criar coleção"}
+                  </button>
+
+                  {showCollectionForm && (
+                    <div
+                      className="collection-create-form"
+                      style={{
+                        display: "flex",
+                        gap: "8px",
+                        alignItems: "center",
+                        marginTop: "10px",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <input
+                        type="text"
+                        value={newCollectionName}
+                        onChange={(event) =>
+                          setNewCollectionName(event.target.value)
+                        }
+                        placeholder="Nome da nova coleção"
+                        maxLength={100}
+                        aria-label="Nome da nova coleção"
+                        required
+                      />
+
+                      <button
+                        type="button"
+                        className="product-form-submit"
+                        onClick={handleCreateCollection}
+                        disabled={creatingCollection}
+                      >
+                        {creatingCollection
+                          ? "Criando..."
+                          : "Salvar coleção"}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="product-form-cancel"
+                        onClick={() => {
+                          setShowCollectionForm(false);
+                          setNewCollectionName("");
+                          setError("");
+                        }}
+                        disabled={creatingCollection}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="product-form-field full-width">
@@ -344,8 +597,8 @@ function ProductForm({ product, onSave, onCancel }) {
                   />
 
                   <small>
-                    Campo opcional para registrar o link do produto
-                    no site do fornecedor.
+                    Campo opcional para registrar o link do produto no
+                    site do fornecedor.
                   </small>
                 </div>
               </div>
@@ -379,11 +632,7 @@ function ProductForm({ product, onSave, onCancel }) {
             <button
               type="submit"
               className="product-form-submit"
-              disabled={
-                loadingOptions ||
-                !optionsReady ||
-                saving
-              }
+              disabled={loadingOptions || !optionsReady || saving}
             >
               {saving
                 ? "Salvando..."
