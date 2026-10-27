@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   getCategories,
   getCollections,
@@ -11,7 +11,6 @@ import "./ProductForm.css";
 const initialForm = {
   descricao: "",
   preco: "",
-  quantidade: "0",
   id_categoria: "",
   id_colecao: "",
   id_fornecedora: "",
@@ -39,6 +38,17 @@ function ProductForm({ product, onSave, onCancel }) {
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // Somente coleções explicitamente ativas podem ser selecionadas.
+  const activeCollections = useMemo(
+    () => collections.filter((collection) => collection.ativo === true),
+    [collections]
+  );
+
+  const selectedCollectionIsActive = activeCollections.some(
+    (collection) =>
+      String(collection.id) === String(formData.id_colecao)
+  );
 
   // Carrega categorias, coleções e fornecedoras pela API.
   useEffect(() => {
@@ -82,7 +92,6 @@ function ProductForm({ product, onSave, onCancel }) {
   }, []);
 
   // Preenche o formulário ao editar um produto.
-  // A quantidade em estoque não é editada nesta tela.
   useEffect(() => {
     if (product) {
       setFormData({
@@ -135,13 +144,20 @@ function ProductForm({ product, onSave, onCancel }) {
 
     try {
       const created = await createCollection({ nome });
-      const newCollection = created?.results?.[0] ?? created;
+      const response = created?.results?.[0] ?? created;
 
-      if (!newCollection?.id) {
+      if (!response?.id) {
         throw new Error(
           "A coleção foi enviada, mas a API não retornou seu ID."
         );
       }
+
+      // O backend pode omitir o campo na resposta de criação.
+      // Uma coleção recém-criada é ativa por padrão.
+      const newCollection = {
+        ...response,
+        ativo: response.ativo ?? true,
+      };
 
       setCollections((current) => [
         ...current.filter((item) => item.id !== newCollection.id),
@@ -220,23 +236,6 @@ function ProductForm({ product, onSave, onCancel }) {
       return;
     }
 
-    // A quantidade inicial só pode ser informada ao cadastrar.
-    const quantidadeInicial = Number(formData.quantidade);
-
-    if (
-      !product &&
-      (
-        formData.quantidade === "" ||
-        !Number.isInteger(quantidadeInicial) ||
-        quantidadeInicial < 0
-      )
-    ) {
-      setError(
-        "Informe uma quantidade inicial inteira igual ou maior que zero."
-      );
-      return;
-    }
-
     if (
       !formData.id_categoria ||
       !formData.id_colecao ||
@@ -248,17 +247,18 @@ function ProductForm({ product, onSave, onCancel }) {
       return;
     }
 
-    // Envia os dados do produto sem alterar a quantidade em estoque.
+    // Impede o envio se a coleção selecionada não estiver ativa.
+    if (!selectedCollectionIsActive) {
+      setError(
+        "Selecione uma coleção ativa. Coleções inativas não podem ser vinculadas a produtos."
+      );
+      return;
+    }
+
     const productData = new FormData();
 
     productData.append("descricao", formData.descricao.trim());
     productData.append("preco", preco.toFixed(2));
-
-    // Envia a quantidade somente na criação; edição não altera o estoque.
-    if (!product) {
-      productData.append("quantidade", String(quantidadeInicial));
-    }
-
     productData.append("id_categoria", String(formData.id_categoria));
     productData.append("id_colecao", String(formData.id_colecao));
     productData.append(
@@ -302,7 +302,7 @@ function ProductForm({ product, onSave, onCancel }) {
   const optionsReady =
     !loadingOptions &&
     categories.length > 0 &&
-    collections.length > 0 &&
+    activeCollections.length > 0 &&
     suppliers.length > 0;
 
   return (
@@ -430,30 +430,6 @@ function ProductForm({ product, onSave, onCancel }) {
                   />
                 </div>
 
-                {!product && (
-                  <div className="product-form-field">
-                    <label htmlFor="quantidade">
-                      Quantidade inicial em estoque *
-                    </label>
-
-                    <input
-                      id="quantidade"
-                      name="quantidade"
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={formData.quantidade}
-                      onChange={handleChange}
-                      placeholder="Ex.: 10"
-                      required
-                    />
-
-                    <small>
-                      Depois do cadastro, altere o estoque somente na tela Estoque.
-                    </small>
-                  </div>
-                )}
-
                 <div className="product-form-field">
                   <label htmlFor="id_categoria">Categoria *</label>
 
@@ -481,19 +457,30 @@ function ProductForm({ product, onSave, onCancel }) {
                   <select
                     id="id_colecao"
                     name="id_colecao"
-                    value={formData.id_colecao}
+                    value={
+                      selectedCollectionIsActive
+                        ? String(formData.id_colecao)
+                        : ""
+                    }
                     onChange={handleChange}
                     required
-                    disabled={collections.length === 0}
+                    disabled={activeCollections.length === 0}
                   >
                     <option value="">Selecione uma coleção</option>
 
-                    {collections.map((collection) => (
+                    {activeCollections.map((collection) => (
                       <option key={collection.id} value={collection.id}>
                         {collection.nome}
                       </option>
                     ))}
                   </select>
+
+                  {activeCollections.length === 0 && (
+                    <small>
+                      Não há coleções ativas. Crie uma coleção para
+                      continuar.
+                    </small>
+                  )}
 
                   <button
                     type="button"
@@ -606,7 +593,7 @@ function ProductForm({ product, onSave, onCancel }) {
               {!optionsReady && !error && (
                 <p className="product-form-error" role="alert">
                   Para cadastrar produtos, é necessário ter pelo menos
-                  uma categoria, uma coleção e uma fornecedora
+                  uma categoria, uma coleção ativa e uma fornecedora
                   cadastradas.
                 </p>
               )}
@@ -632,7 +619,12 @@ function ProductForm({ product, onSave, onCancel }) {
             <button
               type="submit"
               className="product-form-submit"
-              disabled={loadingOptions || !optionsReady || saving}
+              disabled={
+                loadingOptions ||
+                !optionsReady ||
+                !selectedCollectionIsActive ||
+                saving
+              }
             >
               {saving
                 ? "Salvando..."

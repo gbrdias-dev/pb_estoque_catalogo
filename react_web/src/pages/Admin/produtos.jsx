@@ -6,10 +6,11 @@ import ProductTable from "../../components/Admin/ProductTable/ProductTable";
 import ProductForm from "../../components/Admin/ProductForm/ProductForm";
 
 import {
-  getProducts,
+  getAllProductsAdmin,
   createProduct,
   updateProduct,
   deleteProduct,
+  reactivateProduct,
 } from "../../services/api";
 
 import "./produtos.css";
@@ -26,13 +27,13 @@ function Products() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Busca os produtos reais da API Django.
+  // Busca todos os produtos, inclusive os inativos.
   const loadProducts = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
 
-      const data = await getProducts();
+      const data = await getAllProductsAdmin();
 
       const productList = Array.isArray(data)
         ? data
@@ -43,6 +44,7 @@ function Products() {
       setProducts(productList);
     } catch (err) {
       console.error("Erro ao carregar produtos:", err);
+
       setError(
         "Não foi possível carregar os produtos. Verifique se a API Django está funcionando."
       );
@@ -55,24 +57,37 @@ function Products() {
     loadProducts();
   }, [loadProducts]);
 
-  // Filtra os produtos por descrição e disponibilidade.
+  // Filtra por descrição, estoque e situação do produto.
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
       const descricao = product.descricao ?? "";
+      const quantidade = Number(product.quantidade) || 0;
 
       const matchesSearch = descricao
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
 
+      if (!matchesSearch) {
+        return false;
+      }
+
       if (filter === "disponiveis") {
-        return matchesSearch && product.quantidade > 0;
+        return product.ativo === true && quantidade > 0;
       }
 
       if (filter === "indisponiveis") {
-        return matchesSearch && product.quantidade === 0;
+        return product.ativo === true && quantidade === 0;
       }
 
-      return matchesSearch;
+      if (filter === "ativos") {
+        return product.ativo === true;
+      }
+
+      if (filter === "inativos") {
+        return product.ativo === false;
+      }
+
+      return true;
     });
   }, [products, searchTerm, filter]);
 
@@ -88,7 +103,7 @@ function Products() {
     setIsFormOpen(true);
   }
 
-  // O backend exige autenticação para cadastrar e editar.
+  // Cadastra ou atualiza um produto.
   async function handleSave(productData) {
     if (saving) return;
 
@@ -109,9 +124,9 @@ function Products() {
     } catch (err) {
       console.error("Erro ao salvar produto:", err);
 
-      if (err.message?.includes("401") || err.message?.includes("403")) {
+      if (err.status === 401 || err.status === 403) {
         throw new Error(
-          "A API recusou a operação. É necessário configurar a autenticação administrativa antes de cadastrar ou editar produtos."
+          "A API recusou a operação. Verifique sua autenticação administrativa."
         );
       }
 
@@ -123,10 +138,10 @@ function Products() {
     }
   }
 
-  // A exclusão também exige autenticação no backend.
+  // Desativa o produto sem excluir seu histórico.
   async function handleDelete(id) {
     const confirmed = window.confirm(
-      "Tem certeza que deseja excluir este produto?"
+      "Deseja desativar este produto? Ele deixará de aparecer no catálogo público, mas seu histórico será preservado."
     );
 
     if (!confirmed) return;
@@ -137,15 +152,43 @@ function Products() {
       await deleteProduct(id);
       await loadProducts();
     } catch (err) {
-      console.error("Erro ao excluir produto:", err);
+      console.error("Erro ao desativar produto:", err);
 
-      if (err.message?.includes("401") || err.message?.includes("403")) {
+      if (err.status === 401 || err.status === 403) {
         setError(
-          "A API recusou a exclusão. É necessário configurar a autenticação administrativa."
+          "A API recusou a operação. Verifique sua autenticação administrativa."
         );
       } else {
         setError(
-          err.message || "Não foi possível excluir o produto."
+          err.message || "Não foi possível desativar o produto."
+        );
+      }
+    }
+  }
+
+  // Reativa o produto e atualiza a tabela.
+  async function handleReactivate(id) {
+    const confirmed = window.confirm(
+      "Deseja reativar este produto? Ele voltará a aparecer no catálogo público."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setError("");
+
+      await reactivateProduct(id);
+      await loadProducts();
+    } catch (err) {
+      console.error("Erro ao reativar produto:", err);
+
+      if (err.status === 401 || err.status === 403) {
+        setError(
+          "A API recusou a operação. Verifique sua autenticação administrativa."
+        );
+      } else {
+        setError(
+          err.message || "Não foi possível reativar o produto."
         );
       }
     }
@@ -204,7 +247,9 @@ function Products() {
               </div>
 
               <div className="products-filter">
-                <label htmlFor="product-filter">Status</label>
+                <label htmlFor="product-filter">
+                  Filtrar produtos
+                </label>
 
                 <select
                   id="product-filter"
@@ -213,9 +258,15 @@ function Products() {
                     setFilter(event.target.value)
                   }
                 >
-                  <option value="todos">Todos</option>
-                  <option value="disponiveis">Disponíveis</option>
-                  <option value="indisponiveis">Indisponíveis</option>
+                  <option value="todos">Todos os produtos</option>
+                  <option value="ativos">Ativos</option>
+                  <option value="inativos">Inativos</option>
+                  <option value="disponiveis">
+                    Ativos com estoque
+                  </option>
+                  <option value="indisponiveis">
+                    Ativos sem estoque
+                  </option>
                 </select>
               </div>
             </div>
@@ -245,6 +296,7 @@ function Products() {
                   products={filteredProducts}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
+                  onReactivate={handleReactivate}
                 />
               </>
             )}

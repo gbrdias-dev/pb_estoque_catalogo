@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Home from "./pages/Home/home.jsx";
@@ -9,6 +8,7 @@ import Products from "./pages/Admin/produtos.jsx";
 import Stock from "./pages/Admin/estoque.jsx";
 import Suppliers from "./pages/Admin/fornecedores.jsx";
 import Usuarios from "./pages/Admin/usuarios.jsx";
+import Collections from "./pages/Admin/colecoes.jsx";
 import ProductDetails from "./pages/Produto/ProductDetails";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -29,6 +29,7 @@ function App() {
           <Route path="/admin/estoque" element={<Stock />} />
           <Route path="/admin/fornecedores" element={<Suppliers />} />
           <Route path="/admin/usuarios" element={<Usuarios />} />
+          <Route path="/admin/colecoes" element={<Collections />} />
         </Route>
       </Routes>
     </BrowserRouter>

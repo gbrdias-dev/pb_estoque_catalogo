@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { getAdminSession } from "../services/api";
@@ -9,9 +8,6 @@ function ProtectedRoute() {
 
   useEffect(() => {
     let active = true;
-
-    // Reinicia a verificação ao acessar uma rota protegida
-    setAuthenticated(null);
 
     getAdminSession()
       .then((data) => {
@@ -28,7 +24,7 @@ function ProtectedRoute() {
     return () => {
       active = false;
     };
-  }, [location.pathname]);
+  }, []);
 
   if (authenticated === null) {
     return <p>Verificando acesso...</p>;

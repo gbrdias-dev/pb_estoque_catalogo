@@ -1,6 +1,11 @@
 import "./ProductTable.css";
 
-function ProductTable({ products, onEdit, onDelete }) {
+function ProductTable({
+  products,
+  onEdit,
+  onDelete,
+  onReactivate,
+}) {
   return (
     <div className="product-table-wrapper">
       <table className="product-table">
@@ -8,7 +13,8 @@ function ProductTable({ products, onEdit, onDelete }) {
           <tr>
             <th>Produto</th>
             <th>Preço de venda</th>
-            <th>Status</th>
+            <th>Status do estoque</th>
+            <th>Status do cadastro</th>
             <th>Ações</th>
           </tr>
         </thead>
@@ -17,7 +23,8 @@ function ProductTable({ products, onEdit, onDelete }) {
           {products.length > 0 ? (
             products.map((product) => {
               const quantidade = Number(product.quantidade) || 0;
-              const podeExcluir = quantidade === 0;
+              const ativo = product.ativo === true;
+              const podeDesativar = ativo && quantidade === 0;
 
               return (
                 <tr key={product.id}>
@@ -48,13 +55,23 @@ function ProductTable({ products, onEdit, onDelete }) {
                   <td>
                     {quantidade > 0 ? (
                       <span className="product-status available">
-                        Disponível
+                        {quantidade} em estoque
                       </span>
                     ) : (
                       <span className="product-status unavailable">
-                        Indisponível
+                        Sem estoque
                       </span>
                     )}
+                  </td>
+
+                  <td>
+                    <span
+                      className={`product-status ${
+                        ativo ? "available" : "unavailable"
+                      }`}
+                    >
+                      {ativo ? "Ativo" : "Inativo"}
+                    </span>
                   </td>
 
                   <td>
@@ -67,19 +84,29 @@ function ProductTable({ products, onEdit, onDelete }) {
                         Editar
                       </button>
 
-                      <button
-                        type="button"
-                        className="delete-button"
-                        disabled={!podeExcluir}
-                        title={
-                          podeExcluir
-                            ? "Excluir produto"
-                            : "Só é possível excluir produtos sem estoque."
-                        }
-                        onClick={() => onDelete(product.id)}
-                      >
-                        Excluir
-                      </button>
+                      {ativo ? (
+                        <button
+                          type="button"
+                          className="delete-button"
+                          disabled={!podeDesativar}
+                          title={
+                            podeDesativar
+                              ? "Desativar produto"
+                              : "Só é possível desativar produtos sem estoque."
+                          }
+                          onClick={() => onDelete(product.id)}
+                        >
+                          Desativar
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="edit-button"
+                          onClick={() => onReactivate(product.id)}
+                        >
+                          Reativar
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -87,7 +114,7 @@ function ProductTable({ products, onEdit, onDelete }) {
             })
           ) : (
             <tr>
-              <td colSpan="4" className="product-table-empty">
+              <td colSpan="5" className="product-table-empty">
                 Nenhum produto encontrado.
               </td>
             </tr>

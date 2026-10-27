@@ -5,9 +5,12 @@ import "./sidebar.css";
 function Sidebar() {
   return (
     <aside className="admin-sidebar">
-
       <div className="admin-sidebar-brand">
-        <img src={logo} alt="Logo P&B" className="admin-sidebar-logo" />
+        <img
+          src={logo}
+          alt="Logo P&B"
+          className="admin-sidebar-logo"
+        />
         <small>ADMIN</small>
       </div>
 
@@ -32,6 +35,15 @@ function Sidebar() {
         </NavLink>
 
         <NavLink
+          to="/admin/colecoes"
+          className={({ isActive }) =>
+            isActive ? "active" : ""
+          }
+        >
+          Coleções
+        </NavLink>
+
+        <NavLink
           to="/admin/estoque"
           className={({ isActive }) =>
             isActive ? "active" : ""
@@ -49,14 +61,14 @@ function Sidebar() {
           Fornecedores
         </NavLink>
 
-      <NavLink
-       to="/admin/usuarios"
-       className={({ isActive }) =>
-       isActive ? "active" : ""
-      }
-      >
-      Usuários
-     </NavLink>
+        <NavLink
+          to="/admin/usuarios"
+          className={({ isActive }) =>
+            isActive ? "active" : ""
+          }
+        >
+          Usuários
+        </NavLink>
       </nav>
 
       <div className="admin-sidebar-footer">
@@ -64,7 +76,6 @@ function Sidebar() {
           Voltar para o site
         </NavLink>
       </div>
-
     </aside>
   );
 }

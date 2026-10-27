@@ -1,4 +1,3 @@
-
 const API_URL = "http://localhost:8000/api";
 
 let csrfToken = null;
@@ -29,7 +28,6 @@ async function apiRequest(endpoint, options = {}) {
     ...options.headers,
   };
 
-  // Não força JSON quando o corpo é FormData.
   if (!(options.body instanceof FormData) && options.body !== undefined) {
     headers["Content-Type"] = "application/json";
   }
@@ -78,7 +76,6 @@ async function csrfRequest(endpoint, options = {}) {
 
 /**
  * Executa requisições com arquivos usando FormData.
- * Não definir Content-Type manualmente: o navegador inclui o boundary.
  */
 async function csrfFormRequest(endpoint, formData, method = "POST") {
   const token = await getCsrfToken();
@@ -96,9 +93,6 @@ async function csrfFormRequest(endpoint, formData, method = "POST") {
    AUTENTICAÇÃO
 ========================= */
 
-/**
- * Login do administrador pela tabela usuario.
- */
 export async function loginAdmin(email, password) {
   return csrfRequest("/auth/login/", {
     method: "POST",
@@ -106,16 +100,10 @@ export async function loginAdmin(email, password) {
   });
 }
 
-/**
- * Consulta a sessão atual.
- */
 export async function getAdminSession() {
   return apiRequest("/auth/session/");
 }
 
-/**
- * Encerra a sessão do administrador.
- */
 export async function logoutAdmin() {
   return csrfRequest("/auth/logout/", {
     method: "POST",
@@ -128,9 +116,23 @@ export async function logoutAdmin() {
 ========================= */
 
 /**
- * Busca todos os produtos.
+ * Busca produtos ativos para o catálogo público.
+ *
+ * Observação: este filtro é aplicado no frontend.
+ * O ideal é também filtrar os produtos ativos no backend.
  */
 export async function getProducts() {
+  const data = await apiRequest("/produtos/");
+  const products = Array.isArray(data) ? data : data.results || [];
+
+  return products.filter((product) => product.ativo === true);
+}
+
+/**
+ * Busca todos os produtos, ativos e inativos,
+ * para o painel administrativo.
+ */
+export async function getAllProductsAdmin() {
   return apiRequest("/produtos/");
 }
 
@@ -152,13 +154,6 @@ export async function createProduct(product) {
   return csrfRequest("/produtos/", {
     method: "POST",
     body: JSON.stringify(product),
-  });
-}
-
-export async function createCollection(collection) {
-  return csrfRequest("/colecoes/", {
-    method: "POST",
-    body: JSON.stringify(collection),
   });
 }
 
@@ -186,7 +181,6 @@ export async function updateProductStock(id, quantidade) {
   });
 }
 
-
 /**
  * Registra uma reposição e atualiza o estoque no backend.
  */
@@ -212,15 +206,88 @@ export async function darBaixaEstoque(id, quantidade) {
   });
 }
 
-
 /**
- * Remove um produto.
+ * Desativa um produto sem excluir seu registro
+ * nem o histórico de reposições.
  */
-export async function deleteProduct(id) {
-  return csrfRequest(`/produtos/${id}/`, {
-    method: "DELETE",
+export async function deactivateProduct(id) {
+  return csrfRequest(`/produtos/${id}/desativar/`, {
+    method: "POST",
+    body: JSON.stringify({}),
   });
 }
+
+export async function reactivateProduct(id) {
+  return csrfRequest(`/produtos/${id}/reativar/`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+/**
+ * Mantida temporariamente por compatibilidade.
+ *
+ * Não exclui mais o produto fisicamente.
+ * Solicita sua desativação lógica.
+ */
+export async function deleteProduct(id) {
+  return deactivateProduct(id);
+}
+
+
+/* =========================
+   COLEÇÕES
+========================= */
+
+/**
+ * Cadastra uma nova coleção.
+ */
+export async function createCollection(collection) {
+  return csrfRequest("/colecoes/", {
+    method: "POST",
+    body: JSON.stringify(collection),
+  });
+}
+
+/**
+ * Atualiza os dados de uma coleção.
+ */
+export async function updateCollection(id, collection) {
+  return csrfRequest(`/colecoes/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(collection),
+  });
+}
+
+/**
+ * Inativa uma coleção sem excluir seu registro
+ * nem os produtos associados.
+ */
+export async function deactivateCollection(id) {
+  return csrfRequest(`/colecoes/${id}/desativar/`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+/**
+ * Reativa uma coleção anteriormente inativada.
+ */
+export async function reactivateCollection(id) {
+  return csrfRequest(`/colecoes/${id}/reativar/`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+/**
+ * Mantida temporariamente por compatibilidade.
+ * Solicita a inativação lógica da coleção.
+ */
+export async function deleteCollection(id) {
+  return deactivateCollection(id);
+}
+
 
 /* =========================
    DADOS AUXILIARES
@@ -258,12 +325,24 @@ export async function updateSupplier(id, supplier) {
   });
 }
 
+
 /**
- * Exclui um fornecedor.
+ * Inativa um fornecedor sem excluir seu registro.
  */
-export async function deleteSupplier(id) {
-  return csrfRequest(`/fornecedoras/${id}/`, {
-    method: "DELETE",
+export async function deactivateSupplier(id) {
+  return csrfRequest(`/fornecedoras/${id}/desativar/`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+/**
+ * Reativa um fornecedor anteriormente inativado.
+ */
+export async function reactivateSupplier(id) {
+  return csrfRequest(`/fornecedoras/${id}/reativar/`, {
+    method: "POST",
+    body: JSON.stringify({}),
   });
 }
 
@@ -281,7 +360,6 @@ export async function getUsers() {
 
 /**
  * Cadastra um novo usuário administrador.
- * A senha deve ser protegida por hash no backend.
  */
 export async function createUser(user) {
   return csrfRequest("/usuarios/", {

@@ -29,7 +29,17 @@ class ProdutoSerializer(serializers.ModelSerializer):
             "url_fornecedor",
             "imagem",
             "ultima_compra",
+            "ativo",
         ]
+
+    def validate_id_colecao(self, value):
+        if value and not value.ativo:
+            raise serializers.ValidationError(
+                "Não é possível vincular um produto "
+                "a uma coleção inativa."
+            )
+
+        return value
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -53,16 +63,46 @@ class CategoriaSerializer(serializers.ModelSerializer):
         fields = ["id", "nome"]
 
 
+
 class ColecaoSerializer(serializers.ModelSerializer):
+    total_produtos = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Colecao
-        fields = ["id", "nome"]
+        fields = [
+            "id",
+            "nome",
+            "total_produtos",
+            "ativo",
+        ]
+        read_only_fields = ["id", "total_produtos"]
+
+    def validate_nome(self, value):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                "Informe o nome da coleção."
+            )
+
+        return value
+
+
 
 
 class FornecedoraSerializer(serializers.ModelSerializer):
+    total_produtos = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Fornecedora
-        fields = ["id", "nome", "site_fornecedor"]
+        fields = [
+            "id",
+            "nome",
+            "site_fornecedor",
+            "total_produtos",
+            "ativo",
+        ]
+
 
 
 class UsuarioSerializer(serializers.ModelSerializer):

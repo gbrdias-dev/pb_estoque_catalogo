@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 
 import Sidebar from "../../components/Admin/Sidebar/sidebar";
@@ -8,7 +7,8 @@ import {
   getSuppliers,
   createSupplier,
   updateSupplier,
-  deleteSupplier,
+  deactivateSupplier,
+  reactivateSupplier,
 } from "../../services/api";
 
 import "./fornecedores.css";
@@ -27,23 +27,21 @@ function Suppliers() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
+  const [changingStatusId, setChangingStatusId] = useState(null);
 
-  // Carrega os fornecedores cadastrados no banco.
+  // Carrega os fornecedores cadastrados, incluindo os inativos para o administrador.
   async function loadSuppliers() {
     setLoading(true);
     setError("");
 
     try {
       const data = await getSuppliers();
-      const list = Array.isArray(data)
-        ? data
-        : data.results || [];
-
+      const list = Array.isArray(data) ? data : data.results || [];
       setSuppliers(list);
     } catch (err) {
       setError(
-        "Não foi possível carregar os fornecedores. Verifique a conexão com a API."
+        err.message ||
+          "Não foi possível carregar os fornecedores. Verifique a conexão com a API."
       );
     } finally {
       setLoading(false);
@@ -54,26 +52,21 @@ function Suppliers() {
     loadSuppliers();
   }, []);
 
-  // Pesquisa por nome ou site.
   const filteredSuppliers = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
 
     return suppliers.filter((supplier) =>
-      [
-        supplier.nome || "",
-        supplier.site_fornecedor || "",
-      ].some((value) => value.toLowerCase().includes(term))
+      [supplier.nome || "", supplier.site_fornecedor || ""].some((value) =>
+        value.toLowerCase().includes(term)
+      )
     );
   }, [suppliers, searchTerm]);
 
-  // Indicadores.
   const totalSuppliers = suppliers.length;
-
   const suppliersWithSite = suppliers.filter(
     (supplier) => (supplier.site_fornecedor || "").trim() !== ""
   ).length;
 
-  // Abre o formulário para cadastrar.
   function handleAdd() {
     setEditingSupplier(null);
     setFormData({ ...emptyForm });
@@ -81,30 +74,21 @@ function Suppliers() {
     setIsFormOpen(true);
   }
 
-  // Abre o formulário para editar.
   function handleEdit(supplier) {
     setEditingSupplier(supplier);
-
     setFormData({
       nome: supplier.nome || "",
       site_fornecedor: supplier.site_fornecedor || "",
     });
-
     setError("");
     setIsFormOpen(true);
   }
 
-  // Atualiza os campos.
   function handleChange(event) {
     const { name, value } = event.target;
-
-    setFormData((current) => ({
-      ...current,
-      [name]: value,
-    }));
+    setFormData((current) => ({ ...current, [name]: value }));
   }
 
-  // Salva no PostgreSQL através da API Django.
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
@@ -117,11 +101,7 @@ function Suppliers() {
       return;
     }
 
-    const supplierData = {
-      nome,
-      site_fornecedor,
-    };
-
+    const supplierData = { nome, site_fornecedor };
     setSaving(true);
 
     try {
@@ -134,7 +114,6 @@ function Suppliers() {
       setIsFormOpen(false);
       setEditingSupplier(null);
       setFormData({ ...emptyForm });
-
       await loadSuppliers();
     } catch (err) {
       setError(
@@ -146,36 +125,46 @@ function Suppliers() {
     }
   }
 
-  // Exclui o fornecedor do banco após confirmação.
-  async function handleDelete(id) {
+  // Inativa ou reativa sem apagar o histórico e os vínculos com produtos.
+  async function handleToggleStatus(supplier) {
+    const isActive = supplier.ativo !== false;
+    const actionLabel = isActive ? "inativar" : "reativar";
     const confirmed = window.confirm(
-      "Tem certeza que deseja excluir este fornecedor?"
+      `Tem certeza que deseja ${actionLabel} o fornecedor "${supplier.nome}"?`
     );
 
     if (!confirmed) return;
 
     setError("");
-    setDeletingId(id);
+    setChangingStatusId(supplier.id);
 
     try {
-      await deleteSupplier(id);
+      if (isActive) {
+        await deactivateSupplier(supplier.id);
+      } else {
+        await reactivateSupplier(supplier.id);
+      }
       await loadSuppliers();
     } catch (err) {
       setError(
         err.message ||
-          "Não foi possível excluir o fornecedor. Verifique se você está autenticado e se ele não está vinculado a produtos."
+          `Não foi possível ${actionLabel} o fornecedor. Verifique sua autenticação.`
       );
     } finally {
-      setDeletingId(null);
+      setChangingStatusId(null);
     }
   }
 
-  // Fecha o formulário sem salvar.
   function handleCancel() {
     setIsFormOpen(false);
     setEditingSupplier(null);
     setFormData({ ...emptyForm });
     setError("");
+  }
+
+  function getSupplierUrl(site) {
+    if (!site) return "";
+    return /^https?:\/\//i.test(site) ? site : `https://${site}`;
   }
 
   return (
@@ -188,15 +177,9 @@ function Suppliers() {
         <main className="suppliers-page">
           <div className="suppliers-page-header">
             <div>
-              <p className="dashboard-eyebrow">
-                GERENCIAMENTO
-              </p>
-
+              <p className="dashboard-eyebrow">GERENCIAMENTO</p>
               <h1>Fornecedores</h1>
-
-              <p>
-                Cadastre e gerencie os fornecedores da P&B.
-              </p>
+              <p>Cadastre e gerencie os fornecedores da P&amp;B.</p>
             </div>
 
             <button
@@ -214,48 +197,35 @@ function Suppliers() {
             </p>
           )}
 
-          {/* Indicadores */}
           <section className="suppliers-summary">
             <article className="suppliers-summary-card">
               <span>Total de fornecedores</span>
-              <strong>
-                {loading ? "..." : totalSuppliers}
-              </strong>
+              <strong>{loading ? "..." : totalSuppliers}</strong>
               <small>Fornecedores cadastrados</small>
             </article>
 
             <article className="suppliers-summary-card">
               <span>Com site cadastrado</span>
-              <strong>
-                {loading ? "..." : suppliersWithSite}
-              </strong>
+              <strong>{loading ? "..." : suppliersWithSite}</strong>
               <small>Com site informado</small>
             </article>
           </section>
 
-          {/* Pesquisa e tabela */}
           <section className="suppliers-content">
             <div className="suppliers-content-header">
               <div>
                 <h2>Lista de fornecedores</h2>
-                <p>
-                  Consulte os dados dos seus fornecedores.
-                </p>
+                <p>Consulte os dados dos seus fornecedores.</p>
               </div>
             </div>
 
             <div className="suppliers-search">
-              <label htmlFor="supplier-search">
-                Buscar fornecedor
-              </label>
-
+              <label htmlFor="supplier-search">Buscar fornecedor</label>
               <input
                 id="supplier-search"
                 type="search"
                 value={searchTerm}
-                onChange={(event) =>
-                  setSearchTerm(event.target.value)
-                }
+                onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Buscar por nome ou site..."
               />
             </div>
@@ -266,85 +236,92 @@ function Suppliers() {
                   <tr>
                     <th>Fornecedor</th>
                     <th>Site</th>
+                    <th>Situação</th>
                     <th>Ações</th>
                   </tr>
                 </thead>
-
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan="3" className="suppliers-empty">
+                      <td colSpan="4" className="suppliers-empty">
                         Carregando fornecedores...
                       </td>
                     </tr>
                   ) : filteredSuppliers.length > 0 ? (
-                    filteredSuppliers.map((supplier) => (
-                      <tr key={supplier.id}>
-                        <td>
-                          <div className="supplier-name">
-                            <div className="supplier-avatar">
-                              {(supplier.nome || "?")
-                                .charAt(0)
-                                .toUpperCase()}
+                    filteredSuppliers.map((supplier) => {
+                      const isActive = supplier.ativo !== false;
+                      const isChanging = changingStatusId === supplier.id;
+
+                      return (
+                        <tr key={supplier.id}>
+                          <td>
+                            <div className="supplier-name">
+                              <div className="supplier-avatar">
+                                {(supplier.nome || "?").charAt(0).toUpperCase()}
+                              </div>
+                              <strong>{supplier.nome}</strong>
                             </div>
+                          </td>
 
-                            <strong>{supplier.nome}</strong>
-                          </div>
-                        </td>
+                          <td>
+                            {supplier.site_fornecedor ? (
+                              <a
+                                href={getSupplierUrl(supplier.site_fornecedor)}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {supplier.site_fornecedor}
+                              </a>
+                            ) : (
+                              "Não informado"
+                            )}
+                          </td>
 
-                        <td>
-                          {supplier.site_fornecedor ? (
-                            <a
-                              href={
-                                /^https?:\/\//i.test(
-                                  supplier.site_fornecedor
-                                )
-                                  ? supplier.site_fornecedor
-                                  : `https://${supplier.site_fornecedor}`
-                              }
-                              target="_blank"
-                              rel="noreferrer"
+                          <td>
+                            <span
+                              className={`supplier-status ${
+                                isActive ? "active" : "inactive"
+                              }`}
                             >
-                              {supplier.site_fornecedor}
-                            </a>
-                          ) : (
-                            "Não informado"
-                          )}
-                        </td>
+                              {isActive ? "Ativo" : "Inativo"}
+                            </span>
+                          </td>
 
-                        <td>
-                          <div className="supplier-actions">
-                            <button
-                              type="button"
-                              className="supplier-edit-button"
-                              onClick={() => handleEdit(supplier)}
-                              disabled={deletingId === supplier.id}
-                            >
-                              Editar
-                            </button>
+                          <td>
+                            <div className="supplier-actions">
+                              <button
+                                type="button"
+                                className="supplier-edit-button"
+                                onClick={() => handleEdit(supplier)}
+                                disabled={isChanging || saving}
+                              >
+                                Editar
+                              </button>
 
-                            <button
-                              type="button"
-                              className="supplier-delete-button"
-                              onClick={() =>
-                                handleDelete(supplier.id)
-                              }
-                              disabled={deletingId === supplier.id}
-                            >
-                              {deletingId === supplier.id
-                                ? "Excluindo..."
-                                : "Excluir"}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                              <button
+                                type="button"
+                                className={
+                                  isActive
+                                    ? "supplier-delete-button"
+                                    : "supplier-reactivate-button"
+                                }
+                                onClick={() => handleToggleStatus(supplier)}
+                                disabled={isChanging || saving}
+                              >
+                                {isChanging
+                                  ? "Processando..."
+                                  : isActive
+                                    ? "Inativar"
+                                    : "Reativar"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
-                      <td
-                        colSpan="3"
-                        className="suppliers-empty"
-                      >
+                      <td colSpan="4" className="suppliers-empty">
                         {searchTerm
                           ? "Nenhum fornecedor encontrado para essa busca."
                           : "Nenhum fornecedor cadastrado."}
@@ -357,15 +334,12 @@ function Suppliers() {
 
             <div className="suppliers-table-footer">
               Exibindo {loading ? 0 : filteredSuppliers.length}{" "}
-              {filteredSuppliers.length === 1
-                ? "fornecedor"
-                : "fornecedores"}
+              {filteredSuppliers.length === 1 ? "fornecedor" : "fornecedores"}
             </div>
           </section>
         </main>
       </div>
 
-      {/* Modal de cadastro e edição */}
       {isFormOpen && (
         <div className="supplier-modal-overlay">
           <section
@@ -376,19 +350,11 @@ function Suppliers() {
           >
             <div className="supplier-modal-header">
               <div>
-                <p className="dashboard-eyebrow">
-                  GERENCIAMENTO
-                </p>
-
+                <p className="dashboard-eyebrow">GERENCIAMENTO</p>
                 <h2 id="supplier-form-title">
-                  {editingSupplier
-                    ? "Editar fornecedor"
-                    : "Novo fornecedor"}
+                  {editingSupplier ? "Editar fornecedor" : "Novo fornecedor"}
                 </h2>
-
-                <p>
-                  Informe os dados do fornecedor.
-                </p>
+                <p>Informe os dados do fornecedor.</p>
               </div>
 
               <button
@@ -405,10 +371,7 @@ function Suppliers() {
             <form onSubmit={handleSubmit}>
               <div className="supplier-form-grid">
                 <div className="supplier-field full-width">
-                  <label htmlFor="supplier-name">
-                    Nome do fornecedor *
-                  </label>
-
+                  <label htmlFor="supplier-name">Nome do fornecedor *</label>
                   <input
                     id="supplier-name"
                     name="nome"
@@ -422,10 +385,7 @@ function Suppliers() {
                 </div>
 
                 <div className="supplier-field full-width">
-                  <label htmlFor="supplier-site">
-                    Site do fornecedor *
-                  </label>
-
+                  <label htmlFor="supplier-site">Site do fornecedor *</label>
                   <input
                     id="supplier-site"
                     name="site_fornecedor"
@@ -455,11 +415,7 @@ function Suppliers() {
                   Cancelar
                 </button>
 
-                <button
-                  type="submit"
-                  className="supplier-save-button"
-                  disabled={saving}
-                >
+                <button type="submit" className="supplier-save-button" disabled={saving}>
                   {saving
                     ? "Salvando..."
                     : editingSupplier
