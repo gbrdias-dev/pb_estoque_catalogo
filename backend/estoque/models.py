@@ -71,7 +71,7 @@ class Produto(models.Model):
     )
 
     preco = models.DecimalField(max_digits=10, decimal_places=2)
-    quantidade = models.IntegerField()
+    quantidade = models.IntegerField(default=0)
 
     ativo = models.BooleanField(default=True)
 

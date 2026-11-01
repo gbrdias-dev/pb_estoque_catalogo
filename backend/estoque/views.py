@@ -7,6 +7,7 @@ from django.db.models import Count, F, Q
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.contrib.auth.hashers import make_password
 
 from .models import (
     Usuario,
@@ -293,6 +294,42 @@ class ProdutoViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_200_OK,
         )
+    
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="historico",
+        permission_classes=[IsAuthenticatedAdminSession],
+    )
+    
+    def historico(self, request, pk=None):
+        produto = self.get_object()
+
+        reposicoes = (
+            Reposicao.objects
+            .filter(id_produto=produto)
+            .select_related("id_usuario")
+            .order_by("-data_compra", "-id")
+        )
+
+        historico = [
+            {
+                "id": reposicao.id,
+                "data_compra": reposicao.data_compra,
+                "tipo": "Reposição",
+                "quantidade": reposicao.quantidade,
+                "valor_compra": reposicao.valor_compra,
+                "usuario": (
+                    reposicao.id_usuario.nome
+                    if reposicao.id_usuario
+                    else None
+                ),
+            }
+            for reposicao in reposicoes
+        ]
+
+        return Response(historico, status=status.HTTP_200_OK)
+
 
 
 class CategoriaViewSet(viewsets.ReadOnlyModelViewSet):
@@ -480,4 +517,108 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     serializer_class = UsuarioSerializer
     permission_classes = [IsAuthenticatedAdminSession]
 
-    http_method_names = ["get", "post", "head", "options"]
+    # Permite listar, cadastrar, editar parcialmente e redefinir senha.
+    # A exclusão de usuários permanece desabilitada.
+    http_method_names = [
+        "get",
+        "post",
+        "patch",
+        "head",
+        "options",
+    ]
+
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Atualiza nome e e-mail sem exigir uma nova senha.
+
+        A senha só pode ser modificada pela ação redefinir-senha,
+        que garante o armazenamento com hash.
+        """
+        if "senha" in request.data:
+            return Response(
+                {
+                    "senha": (
+                        "Utilize a opção de redefinição de senha "
+                        "para alterar a senha do usuário."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return super().partial_update(request, *args, **kwargs)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="redefinir-senha",
+        permission_classes=[IsAuthenticatedAdminSession],
+    )
+    def redefinir_senha(self, request, pk=None):
+        """
+        Redefine a senha de um usuário administrativo.
+
+        Recebe:
+        {
+            "senha": "nova_senha",
+            "confirmar_senha": "nova_senha"
+        }
+        """
+
+        senha = request.data.get("senha")
+        confirmar_senha = request.data.get("confirmar_senha")
+
+        if not senha or not confirmar_senha:
+            return Response(
+                {
+                    "detail": "Preencha os dois campos de senha."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not isinstance(senha, str) or not isinstance(confirmar_senha, str):
+            return Response(
+                {
+                    "detail": "Informe senhas válidas."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(senha) < 8:
+            return Response(
+                {
+                    "senha": "A senha deve ter pelo menos 8 caracteres."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if senha != confirmar_senha:
+            return Response(
+                {
+                    "confirmar_senha": "As senhas não coincidem."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            usuario = Usuario.objects.select_for_update().get(pk=pk)
+
+            usuario.senha = make_password(senha)
+            usuario.save(update_fields=["senha"])
+
+        return Response(
+            {
+                "detail": "Senha redefinida com sucesso."
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        return Response(
+            {
+                "detail": (
+                    "A exclusão de usuários administrativos "
+                    "não está disponível."
+                )
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )

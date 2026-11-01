@@ -171,3 +171,204 @@
     width: 100%;
   }
 }
+
+
+.product-history-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(32, 28, 22, 0.55);
+}
+
+.product-history-modal {
+  width: min(100%, 1000px);
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 28px;
+  border: 1px solid #eadfca;
+  border-radius: 14px;
+  background: #fffdf9;
+  color: #302b23;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.product-history-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.product-history-header h2 {
+  margin: 6px 0;
+  font-size: 24px;
+}
+
+.product-history-header p:last-child {
+  margin-bottom: 0;
+  color: #766d5f;
+}
+
+.product-history-close {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e5dac5;
+  border-radius: 50%;
+  background: #fff;
+  color: #302b23;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.product-history-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px 18px;
+  border: 1px solid #eadfca;
+  border-radius: 8px;
+  background: #faf6ed;
+}
+
+.product-history-summary span {
+  color: #766d5f;
+}
+
+.product-history-summary strong {
+  color: #6b5420;
+}
+
+.product-history-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.product-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.product-history-table th,
+.product-history-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #eee7db;
+  white-space: nowrap;
+}
+
+.product-history-table th {
+  background: #faf6ed;
+  color: #6b5420;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.product-history-table td {
+  font-size: 14px;
+}
+
+.product-history-message {
+  padding: 28px 12px;
+  color: #766d5f;
+  text-align: center;
+}
+
+.product-history-error {
+  padding: 14px;
+  border: 1px solid #e6b8b8;
+  border-radius: 8px;
+  background: #fff1f1;
+  color: #8b2525;
+}
+
+.product-history-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+@media (max-width: 600px) {
+  .product-history-overlay {
+    padding: 12px;
+  }
+
+  .product-history-modal {
+    padding: 18px;
+  }
+
+  .product-history-header h2 {
+    font-size: 20px;
+  }
+
+  .product-history-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+
+/* =========================
+   BOTÕES DE AÇÃO DOS PRODUTOS
+========================= */
+
+.product-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.product-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 30px;
+  padding: 6px 12px;
+
+  background: #ffffff;
+  border: 1px solid #b08d3c;
+  border-radius: 2px;
+
+  color: #8a6825;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+
+  white-space: nowrap;
+  cursor: pointer;
+
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+/* Mesmo efeito ao passar o mouse */
+.product-actions button:hover:not(:disabled) {
+  background: #b08d3c;
+  border-color: #b08d3c;
+  color: #ffffff;
+}
+
+/* Botões desabilitados */
+.product-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Foco para navegação por teclado */
+.product-actions button:focus-visible {
+  outline: 2px solid #b08d3c;
+  outline-offset: 3px;
+}

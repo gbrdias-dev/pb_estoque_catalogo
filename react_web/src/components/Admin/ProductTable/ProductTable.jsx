@@ -1,3 +1,4 @@
+
 import "./ProductTable.css";
 
 function ProductTable({
@@ -5,6 +6,7 @@ function ProductTable({
   onEdit,
   onDelete,
   onReactivate,
+  onViewHistory,
 }) {
   return (
     <div className="product-table-wrapper">
@@ -76,6 +78,14 @@ function ProductTable({
 
                   <td>
                     <div className="product-actions">
+                      <button
+                        type="button"
+                        className="history-button"
+                        onClick={() => onViewHistory(product)}
+                      >
+                        Ver histórico
+                      </button>
+
                       <button
                         type="button"
                         className="edit-button"

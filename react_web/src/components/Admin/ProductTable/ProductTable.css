@@ -182,3 +182,23 @@
   opacity: 0.45;
   transform: none;
 }
+
+
+.history-button {
+  padding: 8px 12px;
+  border: 1px solid #d9b24c;
+  border-radius: 6px;
+  background-color: #fffaf0;
+  color: #6b5420;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.history-button:hover {
+  background-color: #d9b24c;
+  color: #302b23;
+}

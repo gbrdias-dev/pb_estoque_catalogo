@@ -63,9 +63,9 @@ function Suppliers() {
   }, [suppliers, searchTerm]);
 
   const totalSuppliers = suppliers.length;
-  const suppliersWithSite = suppliers.filter(
-    (supplier) => (supplier.site_fornecedor || "").trim() !== ""
-  ).length;
+  const activeSuppliers = suppliers.filter(
+  (supplier) => supplier.ativo !== false
+).length;
 
   function handleAdd() {
     setEditingSupplier(null);
@@ -205,9 +205,9 @@ function Suppliers() {
             </article>
 
             <article className="suppliers-summary-card">
-              <span>Com site cadastrado</span>
-              <strong>{loading ? "..." : suppliersWithSite}</strong>
-              <small>Com site informado</small>
+             <span>Fornecedores ativos</span>
+             <strong>{loading ? "..." : activeSuppliers}</strong>
+             <small>Fornecedores disponíveis para uso</small>
             </article>
           </section>
 

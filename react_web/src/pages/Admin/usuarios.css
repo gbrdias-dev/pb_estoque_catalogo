@@ -185,11 +185,61 @@
 .users-role {
   display: inline-block;
   border-radius: 999px;
-  background: #f5efdE;
+  background: #f5efde;
   color: #82651d;
   padding: 6px 10px;
   font-size: 0.8rem;
   font-weight: 700;
+}
+
+/* Ações por usuário */
+.users-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.users-action-button {
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 8px 11px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease,
+    color 0.2s ease, transform 0.2s ease;
+}
+
+.users-action-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.users-edit-button {
+  border-color: #d9c58e;
+  background: #fbf7e9;
+  color: #80621c;
+}
+
+.users-edit-button:hover:not(:disabled) {
+  border-color: #c9a441;
+  background: #f5edda;
+}
+
+.users-password-button {
+  border-color: #ddd6c8;
+  background: #fff;
+  color: #5f574b;
+}
+
+.users-password-button:hover:not(:disabled) {
+  border-color: #b9ad98;
+  background: #f8f6f1;
+}
+
+.users-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .users-empty {
@@ -267,12 +317,17 @@
 }
 
 .users-modal-close {
+  flex: 0 0 auto;
   border: 0;
   background: transparent;
   color: #71695d;
   font-size: 1.8rem;
   line-height: 1;
   cursor: pointer;
+}
+
+.users-modal-close:hover:not(:disabled) {
+  color: #29251e;
 }
 
 .users-form-grid {
@@ -315,6 +370,7 @@
   padding: 12px 18px;
   font-weight: 650;
   cursor: pointer;
+  transition: background 0.2s ease;
 }
 
 .users-cancel-button:hover:not(:disabled) {
@@ -327,6 +383,19 @@
 .users-add-button:disabled {
   cursor: not-allowed;
   opacity: 0.65;
+}
+
+@media (max-width: 900px) {
+  .users-table th,
+  .users-table td {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .users-row-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 760px) {
@@ -368,5 +437,9 @@
 
   .users-form-actions > button {
     flex: 1;
+  }
+
+  .users-row-actions {
+    min-width: 125px;
   }
 }

@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import Sidebar from "../../components/Admin/Sidebar/sidebar";
 import AdminHeader from "../../components/Admin/AdminHeader/adminheader";
@@ -12,10 +13,17 @@ import {
 
 import "./estoque.css";
 
+const VALID_FILTERS = ["todos", "disponiveis", "baixo", "indisponiveis"];
+
 function Stock() {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filter, setFilter] = useState("todos");
+  const [filter, setFilter] = useState(() => {
+    const filterParam = searchParams.get("filter");
+    return VALID_FILTERS.includes(filterParam) ? filterParam : "todos";
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -76,6 +84,17 @@ function Stock() {
       active = false;
     };
   }, []);
+
+  // Mantém o filtro sincronizado com o parâmetro da URL.
+  useEffect(() => {
+    const filterParam = searchParams.get("filter");
+
+    if (VALID_FILTERS.includes(filterParam)) {
+      setFilter(filterParam);
+    } else {
+      setFilter("todos");
+    }
+  }, [searchParams]);
 
   function getStockStatus(quantity) {
     const amount = Number(quantity);
@@ -383,7 +402,22 @@ function Stock() {
                 <select
                   id="stock-filter-select"
                   value={filter}
-                  onChange={(event) => setFilter(event.target.value)}
+                  onChange={(event) => {
+                    const selectedFilter = event.target.value;
+                    setFilter(selectedFilter);
+
+                    setSearchParams((currentParams) => {
+                      const nextParams = new URLSearchParams(currentParams);
+
+                      if (selectedFilter === "todos") {
+                        nextParams.delete("filter");
+                      } else {
+                        nextParams.set("filter", selectedFilter);
+                      }
+
+                      return nextParams;
+                    });
+                  }}
                 >
                   <option value="todos">Todas as situações</option>
                   <option value="disponiveis">

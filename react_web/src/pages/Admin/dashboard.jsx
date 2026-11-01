@@ -1,9 +1,9 @@
-
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import Sidebar from "../../components/Admin/Sidebar/sidebar";
 import AdminHeader from "../../components/Admin/AdminHeader/adminheader";
-import { getProducts } from "../../services/api";
+import { getAllProductsAdmin } from "../../services/api";
 
 import "./dashboard.css";
 
@@ -17,18 +17,22 @@ function Dashboard() {
 
     async function loadProducts() {
       try {
-        const data = await getProducts();
+        const data = await getAllProductsAdmin();
 
         // Compatível com listas simples e respostas paginadas do DRF.
         const productList = Array.isArray(data)
           ? data
-          : data.results || [];
+          : Array.isArray(data?.results)
+            ? data.results
+            : [];
 
         if (active) {
           setProducts(productList);
           setError("");
         }
       } catch (err) {
+        console.error("Erro ao carregar produtos do dashboard:", err);
+
         if (active) {
           setError(
             "Não foi possível carregar os dados dos produtos."
@@ -48,30 +52,43 @@ function Dashboard() {
     };
   }, []);
 
+  // Produtos cadastrados: inclui ativos e inativos.
+  const activeProducts = products.filter(
+    (product) => product.ativo !== false
+  );
+
   const statistics = [
     {
       title: "Produtos cadastrados",
       value: products.length,
+      to: "/admin/produtos?filter=todos",
+      description: "Ver todos os produtos",
     },
     {
       title: "Produtos disponíveis",
-      value: products.filter(
+      value: activeProducts.filter(
         (product) => Number(product.quantidade) > 0
       ).length,
+      to: "/admin/produtos?filter=disponiveis",
+      description: "Ver produtos disponíveis",
     },
     {
       title: "Baixo estoque",
-      value: products.filter(
+      value: activeProducts.filter(
         (product) =>
           Number(product.quantidade) > 0 &&
           Number(product.quantidade) <= 5
       ).length,
+      to: "/admin/estoque?filter=baixo",
+      description: "Ver produtos com baixo estoque",
     },
     {
       title: "Indisponíveis",
-      value: products.filter(
-        (product) => Number(product.quantidade) === 0
+      value: activeProducts.filter(
+        (product) => Number(product.quantidade) <= 0
       ).length,
+      to: "/admin/produtos?filter=indisponiveis",
+      description: "Ver produtos sem estoque",
     },
   ];
 
@@ -88,15 +105,10 @@ function Dashboard() {
 
         <main className="dashboard">
           <div className="dashboard-intro">
-            <p className="dashboard-eyebrow">
-              VISÃO GERAL
-            </p>
-
+            <p className="dashboard-eyebrow">VISÃO GERAL</p>
             <h1>Dashboard</h1>
-
             <p>
-              Acompanhe as principais informações
-              do seu estoque.
+              Acompanhe as principais informações do seu estoque.
             </p>
           </div>
 
@@ -106,28 +118,38 @@ function Dashboard() {
             </p>
           )}
 
-          <section className="dashboard-statistics">
+          <section
+            className="dashboard-statistics"
+            aria-label="Indicadores do estoque"
+          >
             {statistics.map((statistic) => (
-              <article
-                className="dashboard-card"
+              <Link
+                className="dashboard-card-link"
+                to={statistic.to}
                 key={statistic.title}
+                aria-label={`${statistic.title}: ${
+                  loading ? "carregando" : statistic.value
+                }. ${statistic.description}`}
               >
-                <p>{statistic.title}</p>
+                <article className="dashboard-card">
+                  <p>{statistic.title}</p>
 
-                <strong>
-                  {loading ? "..." : statistic.value}
-                </strong>
-              </article>
+                  <strong>
+                    {loading ? "..." : statistic.value}
+                  </strong>
+
+                  <span className="dashboard-card-hint">
+                    {statistic.description}
+                  </span>
+                </article>
+              </Link>
             ))}
           </section>
 
           <section className="dashboard-section">
             <div className="dashboard-section-header">
               <div>
-                <p className="dashboard-eyebrow">
-                  PRODUTOS
-                </p>
-
+                <p className="dashboard-eyebrow">PRODUTOS</p>
                 <h2>Produtos recentes</h2>
               </div>
             </div>
@@ -142,9 +164,7 @@ function Dashboard() {
               </div>
             ) : recentProducts.length === 0 ? (
               <div className="dashboard-empty">
-                <p>
-                  Nenhum produto cadastrado ainda.
-                </p>
+                <p>Nenhum produto cadastrado ainda.</p>
               </div>
             ) : (
               <div className="dashboard-recent-products">
@@ -155,24 +175,19 @@ function Dashboard() {
                   >
                     <div>
                       <strong>{product.descricao}</strong>
-                      <p>
-                        Código: {product.id}
-                      </p>
+                      <p>Código: {product.id}</p>
                     </div>
 
                     <div className="dashboard-product-info">
                       <span>
-                        {Number(product.quantidade)} em estoque
+                        {Number(product.quantidade) || 0} em estoque
                       </span>
 
                       <strong>
-                        {Number(product.preco).toLocaleString(
-                          "pt-BR",
-                          {
-                            style: "currency",
-                            currency: "BRL",
-                          }
-                        )}
+                        {Number(product.preco).toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        })}
                       </strong>
                     </div>
                   </article>

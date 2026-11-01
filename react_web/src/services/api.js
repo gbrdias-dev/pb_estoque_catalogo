@@ -143,6 +143,15 @@ export async function getProductById(id) {
   return apiRequest(`/produtos/${id}/`);
 }
 
+
+/**
+ * Busca o histórico de reposições de um produto.
+ */
+export async function getProductHistory(id) {
+  return apiRequest(`/produtos/${id}/historico/`);
+}
+
+
 /**
  * Cria um produto com JSON ou FormData.
  */
@@ -368,6 +377,32 @@ export async function createUser(user) {
       nome: user.nome,
       email: user.email,
       senha: user.senha,
+    }),
+  });
+}
+
+/**
+ * Atualiza nome e e-mail de um usuário.
+ */
+export async function updateUser(id, user) {
+  return csrfRequest(`/usuarios/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      nome: user.nome,
+      email: user.email,
+    }),
+  });
+}
+
+/**
+ * Redefine a senha de um usuário administrador.
+ */
+export async function resetUserPassword(id, senha, confirmarSenha) {
+  return csrfRequest(`/usuarios/${id}/redefinir-senha/`, {
+    method: "POST",
+    body: JSON.stringify({
+      senha,
+      confirmar_senha: confirmarSenha,
     }),
   });
 }

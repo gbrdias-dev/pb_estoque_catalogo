@@ -15,6 +15,11 @@ from .models import (
 
 class ProdutoSerializer(serializers.ModelSerializer):
     ultima_compra = serializers.DateField(read_only=True)
+    quantidade = serializers.IntegerField(
+        required=False,
+        default=0,
+        min_value=0,
+    )
 
     class Meta:
         model = Produto
@@ -63,7 +68,6 @@ class CategoriaSerializer(serializers.ModelSerializer):
         fields = ["id", "nome"]
 
 
-
 class ColecaoSerializer(serializers.ModelSerializer):
     total_produtos = serializers.IntegerField(read_only=True)
 
@@ -88,8 +92,6 @@ class ColecaoSerializer(serializers.ModelSerializer):
         return value
 
 
-
-
 class FornecedoraSerializer(serializers.ModelSerializer):
     total_produtos = serializers.IntegerField(read_only=True)
 
@@ -104,11 +106,10 @@ class FornecedoraSerializer(serializers.ModelSerializer):
         ]
 
 
-
 class UsuarioSerializer(serializers.ModelSerializer):
     senha = serializers.CharField(
         write_only=True,
-        required=True,
+        required=False,
         min_length=8,
         trim_whitespace=False,
     )
@@ -120,26 +121,48 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
     def validate_nome(self, value):
         value = value.strip()
+
         if not value:
             raise serializers.ValidationError(
                 "Informe o nome do usuário."
             )
+
         return value
 
     def validate_email(self, value):
         value = value.strip().lower()
 
-        if Usuario.objects.filter(email__iexact=value).exists():
+        usuarios_existentes = Usuario.objects.filter(
+            email__iexact=value
+        )
+
+        # Na edição, desconsidera o próprio usuário.
+        if self.instance:
+            usuarios_existentes = usuarios_existentes.exclude(
+                pk=self.instance.pk
+            )
+
+        if usuarios_existentes.exists():
             raise serializers.ValidationError(
                 "Já existe um usuário com esse e-mail."
             )
 
         return value
 
+    def validate(self, attrs):
+        # A senha é obrigatória somente no cadastro.
+        if self.instance is None and not attrs.get("senha"):
+            raise serializers.ValidationError({
+                "senha": "Informe uma senha para o novo usuário."
+            })
+
+        return attrs
+
     def create(self, validated_data):
-        validated_data["senha"] = make_password(
-            validated_data["senha"]
-        )
+        senha = validated_data.pop("senha")
+
+        validated_data["senha"] = make_password(senha)
+
         return Usuario.objects.create(**validated_data)
 
 
@@ -161,6 +184,7 @@ class ReposicaoSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "A quantidade da reposição deve ser maior que zero."
             )
+
         return value
 
     def validate_valor_compra(self, value):
@@ -168,4 +192,5 @@ class ReposicaoSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "O valor da compra não pode ser negativo."
             )
+
         return value
