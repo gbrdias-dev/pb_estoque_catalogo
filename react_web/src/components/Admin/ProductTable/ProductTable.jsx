@@ -88,6 +88,28 @@ function ProductTable({
 
                       <button
                         type="button"
+                        className="supplier-link-button"
+                        disabled={!product.url_fornecedor?.trim()}
+                        title={
+                          product.url_fornecedor?.trim()
+                            ? "Abrir produto no site do fornecedor"
+                            : "Este produto não possui link do fornecedor cadastrado."
+                        }
+                        onClick={() => {
+                          if (product.url_fornecedor?.trim()) {
+                            window.open(
+                              product.url_fornecedor,
+                              "_blank",
+                              "noopener,noreferrer"
+                            );
+                          }
+                        }}
+                      >
+                        Ver fornecedor
+                      </button>
+
+                      <button
+                        type="button"
                         className="edit-button"
                         onClick={() => onEdit(product)}
                       >

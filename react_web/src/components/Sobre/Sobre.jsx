@@ -25,11 +25,14 @@ function About() {
             transformar momentos simples em ocasiões especiais.
           </p>
 
+          <p>Há 20 anos, criando acessórios com estilo e muita criatividade. Sempre utilizando insumos dos maiores fabricantes nacionais, na busca pelo equilíbrio perfeito entre beleza e preço acessível.</p>
+
           <p>
             Trabalhamos com peças selecionadas para oferecer beleza,
             personalidade e praticidade, ajudando você a encontrar
             acessórios que combinam com o seu estilo.
           </p>
+          
 
         </div>
 

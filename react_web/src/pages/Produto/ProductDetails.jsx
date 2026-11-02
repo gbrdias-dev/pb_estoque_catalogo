@@ -93,12 +93,14 @@ function ProductDetails() {
 
                 <h1>{product.descricao}</h1>
 
-                <p className="product-details-price">
-                  R${" "}
-                  {Number(product.preco)
-                    .toFixed(2)
-                    .replace(".", ",")}
-                </p>
+                {Number(product.quantidade) > 0 && (
+                  <p className="product-details-price">
+                    R${" "}
+                    {Number(product.preco)
+                      .toFixed(2)
+                      .replace(".", ",")}
+                  </p>
+                )}
 
                 <span
                   className={`product-details-status ${

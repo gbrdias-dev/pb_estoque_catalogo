@@ -42,12 +42,14 @@ function ProductCard({ product }) {
       <div className="product-card-content">
         <h3>{product.descricao}</h3>
 
-        <p className="product-card-price">
-          R${" "}
-          {Number(product.preco)
-            .toFixed(2)
-            .replace(".", ",")}
-        </p>
+        {disponivel && (
+          <p className="product-card-price">
+            R${" "}
+            {Number(product.preco)
+              .toFixed(2)
+              .replace(".", ",")}
+          </p>
+        )}
 
         {disponivel ? (
           <span className="product-card-status available">
@@ -55,7 +57,7 @@ function ProductCard({ product }) {
           </span>
         ) : (
           <span className="product-card-status unavailable">
-            Indisponível
+            Sob Encomenda
           </span>
         )}
 

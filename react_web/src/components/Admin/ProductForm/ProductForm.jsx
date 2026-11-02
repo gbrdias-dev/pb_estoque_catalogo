@@ -39,15 +39,20 @@ function ProductForm({ product, onSave, onCancel }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Somente coleções explicitamente ativas podem ser selecionadas.
-  const activeCollections = useMemo(
-    () => collections.filter((collection) => collection.ativo === true),
-    [collections]
+  // Em novos cadastros, exibe somente coleções ativas.
+// Na edição, permite visualizar também as coleções inativas.
+  const availableCollections = useMemo(
+    () =>
+      product
+        ? collections
+        : collections.filter((collection) => collection.ativo === true),
+    [collections, product]
   );
 
-  const selectedCollectionIsActive = activeCollections.some(
-    (collection) =>
-      String(collection.id) === String(formData.id_colecao)
+  const selectedCollectionIsActive = availableCollections.some(
+  (collection) =>
+    String(collection.id) === String(formData.id_colecao) &&
+    collection.ativo === true
   );
 
   // Carrega categorias, coleções e fornecedoras pela API.
@@ -195,8 +200,14 @@ function ProductForm({ product, onSave, onCancel }) {
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      setError("Selecione um arquivo de imagem válido.");
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      setError("Formato inválido. Utilize JPG, JPEG, PNG ou WEBP.");
       event.target.value = "";
       return;
     }
@@ -270,6 +281,11 @@ function ProductForm({ product, onSave, onCancel }) {
       formData.url_fornecedor.trim()
     );
 
+    // Novos produtos devem ser cadastrados como ativos.
+    if (!product) {
+      productData.append("ativo", "true");
+    }
+
     if (imageFile) {
       productData.append("imagem", imageFile);
     }
@@ -302,7 +318,7 @@ function ProductForm({ product, onSave, onCancel }) {
   const optionsReady =
     !loadingOptions &&
     categories.length > 0 &&
-    activeCollections.length > 0 &&
+    availableCollections.length > 0 &&
     suppliers.length > 0;
 
   return (
@@ -366,12 +382,12 @@ function ProductForm({ product, onSave, onCancel }) {
                     id="imagem"
                     name="imagem"
                     type="file"
-                    accept="image/*"
+                    accept=".jpg,.jpeg,.png,.webp"
                     onChange={handleImageChange}
                   />
 
                   <small>
-                    Formatos de imagem aceitos; tamanho máximo de 5 MB.
+                    Formatos aceitos: JPG, JPEG, PNG e WEBP. Tamanho máximo: 5 MB.
                   </small>
 
                   {imagePreview && (
@@ -464,18 +480,18 @@ function ProductForm({ product, onSave, onCancel }) {
                     }
                     onChange={handleChange}
                     required
-                    disabled={activeCollections.length === 0}
+                    disabled={availableCollections.length === 0}
                   >
                     <option value="">Selecione uma coleção</option>
 
-                    {activeCollections.map((collection) => (
+                    {availableCollections.map((collection) => (
                       <option key={collection.id} value={collection.id}>
                         {collection.nome}
                       </option>
                     ))}
                   </select>
 
-                  {activeCollections.length === 0 && (
+                  {availableCollections.length === 0 && (
                     <small>
                       Não há coleções ativas. Crie uma coleção para
                       continuar.
